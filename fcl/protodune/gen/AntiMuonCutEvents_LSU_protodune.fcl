@@ -1,0 +1,7 @@
+#include "prodtext_common_protodune.fcl"
+
+outputs.out1.fileName: "AntiMuonCutEvents_LSU_protodune_%tc_gen.root"
+source.firstRun: 10000001
+#Name of text file input
+physics.producers.generator.InputFileName: "AntiMuonCutEvents_100.txt"
+physics.producers.generator.MoveY: 900 #new y postion for all particles
