@@ -1,5 +1,4 @@
-art_make( BASENAME_ONLY 
-      MODULE_LIBRARIES larcore_Geometry
+art_make( MODULE_LIBRARIES larcore_Geometry
 	  larcore_Geometry_Geometry_service
 	  larsim_Simulation
 	  larsim_MCCheater_BackTracker_service

@@ -16,9 +16,13 @@
 #include "art/Utilities/InputTag.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
+#include "art/Framework/Services/Optional/TFileService.h"
 
 #include <iostream>
+#include <iomanip>
+#include <string>
 
+#include "SimulationBase/MCTruth.h"
 #include "SimulationBase/MCParticle.h"
 #include "larcore/Geometry/Geometry.h"
 
@@ -46,11 +50,15 @@ public:
 
   // Required functions.
   void analyze(art::Event const & e) override;
+  virtual void beginJob() override;
 
 
 private:
 
   // Declare member data here.
+  art::InputTag _mcParticleTag;
+
+  TTree* _outtree;
 
 };
 
@@ -60,7 +68,14 @@ dune::MuonTaggerTreeMaker::MuonTaggerTreeMaker(fhicl::ParameterSet const & p)
   EDAnalyzer(p)  // ,
  // More initializers here.
 {
+  _mcParticleTag = p.get<art::InputTag>("mcParticleTag");
+  std::cout << "_mcParticleTag: " << _mcParticleTag << std::endl;
+}
 
+void dune::MuonTaggerTreeMaker::beginJob()
+{
+  art::ServiceHandle<art::TFileService> tfs;
+  _outtree = tfs->make<TTree>("tree","tree");
 }
 
 void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
@@ -68,23 +83,27 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
   // Implementation of required member function here.
 
   //Get needed data products
-  std::string fTruePartLabel = "largeant";
-  art::Handle<std::vector<simb::MCParticle>> truePartHand;
-  e.getByLabel(fTruePartLabel, truePartHand);
-  std::vector<art::Ptr<simb::MCParticle>> truePartVec;
-  if(truePartHand.isValid())
+  auto mcPartHand = e.getValidHandle<std::vector<simb::MCParticle>>(_mcParticleTag);
+  std::vector<art::Ptr<simb::MCParticle>> mcPartVec;
+  art::fill_ptr_vector(mcPartVec, mcPartHand);
+
+  for (const auto& mcPart : mcPartVec)
   {
-    art::fill_ptr_vector(truePartVec, truePartHand);
-  }
-  for (const auto& truePart : truePartVec)
-  {
-    double trueStartMom = truePart->Momentum().Mag()*1000.; //in MeV/c
-    double trueStartTheta = truePart->Momentum().Vect().Theta()*180./M_PI; //in degrees
-    double trueStartPhi = truePart->Momentum().Vect().Phi()*180./M_PI; //in degrees
-    std::cout << truePart->PdgCode() << " momentum [MeV]: " << trueStartMom << " Theta [deg]: "<< trueStartTheta << " Phi [deg]: "<< trueStartPhi  << "  ";
-    std::cout << " X,Y,Z: " <<truePart->Position().X() <<", "<<truePart->Position().Y()<<", "<<truePart->Position().Z()<<", "<< std::endl;
+    double partStartMom = mcPart->Momentum().Mag()*1000.; //in MeV/c
+    //double partStartTheta = mcPart->Momentum().Vect().Theta()*180./M_PI; //in degrees
+    //double partStartPhi = mcPart->Momentum().Vect().Phi()*180./M_PI; //in degrees
+    std::cout << "MC Particle: PDG ID: " << mcPart->PdgCode() << "Status: " << mcPart->StatusCode() << " momentum [MeV]: " << partStartMom;
+    //std::cout << " Theta [deg]: "<< partStartTheta << " Phi [deg]: "<< partStartPhi  << "  " << std::endl;
+    std::cout << " Px,Py,Pz:    " <<mcPart->Momentum().X() <<", "<<mcPart->Momentum().Y()<<", "<<mcPart->Momentum().Z()<<", "<< std::endl;
+    std::cout << " Start X,Y,Z: " <<mcPart->Position().X() <<", "<<mcPart->Position().Y()<<", "<<mcPart->Position().Z()<<", "<< std::endl;
+    std::cout << " End X,Y,Z:   " <<mcPart->EndPosition().X() <<", "<<mcPart->EndPosition().Y()<<", "<<mcPart->EndPosition().Z()<<", "<< std::endl;
+    //for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
+    //{
+    //  std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
+    //}
   }
   
 }
+
 
 DEFINE_ART_MODULE(dune::MuonTaggerTreeMaker)
