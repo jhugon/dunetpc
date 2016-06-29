@@ -16,7 +16,7 @@ source:
 {
   module_type: RootInput
   fileNames: ["/scratch/jhugon/AntiMuonCutEvents_LSU_protodune_1file_0_20160628T184031_gen_g4.root"]
-  maxEvents:  10
+  maxEvents:  -1
 }
 
 physics:
@@ -27,6 +27,7 @@ physics:
     {
       module_type:     "MuonTaggerTreeMaker"
       mcParticleTag: "largeant"
+      simChannelTag: "largeant"
     }
   }
 

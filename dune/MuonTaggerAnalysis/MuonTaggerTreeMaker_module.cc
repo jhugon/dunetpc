@@ -25,12 +25,14 @@
 #include "SimulationBase/MCTruth.h"
 #include "SimulationBase/MCParticle.h"
 #include "larcore/Geometry/Geometry.h"
+#include "larsim/Simulation/SimChannel.h"
 
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TDatabasePDG.h"
+#include "TMath.h"
 
 namespace dune {
   class MuonTaggerTreeMaker;
@@ -57,9 +59,44 @@ private:
 
   // Declare member data here.
   art::InputTag _mcParticleTag;
+  art::InputTag _simChannelTag;
 
   TTree* _outtree;
+  TH1F* _trajectoryX;
+  TH1F* _trajectoryY;
+  TH1F* _trajectoryZ;
 
+  // tree data members
+  //
+
+  float _xb;
+  float _yb;
+  float _zb;
+  float _tb;
+  float _xe;
+  float _ye;
+  float _ze;
+  float _te;
+
+  float _pxb;
+  float _pyb;
+  float _pzb;
+  float _pEb;
+  float _pxe;
+  float _pye;
+  float _pze;
+  float _pEe;
+
+  float _pb;
+  float _thetab;
+  float _costhetab;
+  float _phib;
+
+  float _thetazenithb;
+  float _costhetazenithb;
+  float _phizenithb;
+
+  int _numberTrajectoryPoints;
 };
 
 
@@ -70,12 +107,47 @@ dune::MuonTaggerTreeMaker::MuonTaggerTreeMaker(fhicl::ParameterSet const & p)
 {
   _mcParticleTag = p.get<art::InputTag>("mcParticleTag");
   std::cout << "_mcParticleTag: " << _mcParticleTag << std::endl;
+  _simChannelTag = p.get<art::InputTag>("simChannelTag");
+  std::cout << "_simChannelTag: " << _simChannelTag << std::endl;
 }
 
 void dune::MuonTaggerTreeMaker::beginJob()
 {
   art::ServiceHandle<art::TFileService> tfs;
   _outtree = tfs->make<TTree>("tree","tree");
+
+  _outtree->Branch("xb",&_xb,"xb/F");
+  _outtree->Branch("yb",&_yb,"yb/F");
+  _outtree->Branch("zb",&_zb,"zb/F");
+  _outtree->Branch("tb",&_tb,"tb/F");
+  _outtree->Branch("xe",&_xe,"xe/F");
+  _outtree->Branch("ye",&_ye,"ye/F");
+  _outtree->Branch("ze",&_ze,"ze/F");
+  _outtree->Branch("te",&_te,"te/F");
+
+  _outtree->Branch("pxb",&_pxb,"pxb/F");
+  _outtree->Branch("pyb",&_pyb,"pyb/F");
+  _outtree->Branch("pzb",&_pzb,"pzb/F");
+  _outtree->Branch("pEb",&_pEb,"pEb/F");
+  _outtree->Branch("pxe",&_pxe,"pxe/F");
+  _outtree->Branch("pye",&_pye,"pye/F");
+  _outtree->Branch("pze",&_pze,"pze/F");
+  _outtree->Branch("pEe",&_pEe,"pEe/F");
+
+  _outtree->Branch("pb",&_pb,"pb/F");
+  _outtree->Branch("thetab",&_thetab,"thetab/F");
+  _outtree->Branch("costhetab",&_costhetab,"costhetab/F");
+  _outtree->Branch("phib",&_phib,"phib/F");
+
+  _outtree->Branch("thetazenithb",&_thetazenithb,"thetazenithb/F");
+  _outtree->Branch("costhetazenithb",&_costhetazenithb,"costhetazenithb/F");
+  _outtree->Branch("phizenithb",&_phizenithb,"phizenithb/F");
+
+  _outtree->Branch("numberTrajectoryPoints",&_numberTrajectoryPoints,"numberTrajectoryPoints/I");
+
+  _trajectoryX = tfs->make<TH1F>("trajectoryX","",2000,-5000,5000);
+  _trajectoryY = tfs->make<TH1F>("trajectoryY","",2000,-5000,1000);
+  _trajectoryZ = tfs->make<TH1F>("trajectoryZ","",2000,-5000,5000);
 }
 
 void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
@@ -87,6 +159,10 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
   std::vector<art::Ptr<simb::MCParticle>> mcPartVec;
   art::fill_ptr_vector(mcPartVec, mcPartHand);
 
+  auto simChanHand = e.getValidHandle<std::vector<sim::SimChannel>>(_simChannelTag);
+  std::vector<art::Ptr<sim::SimChannel>> simChanVec;
+  art::fill_ptr_vector(simChanVec, simChanHand);
+
   for (const auto& mcPart : mcPartVec)
   {
     double partStartMom = mcPart->Momentum().Mag()*1000.; //in MeV/c
@@ -97,11 +173,57 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     std::cout << " Px,Py,Pz:    " <<mcPart->Momentum().X() <<", "<<mcPart->Momentum().Y()<<", "<<mcPart->Momentum().Z()<<", "<< std::endl;
     std::cout << " Start X,Y,Z: " <<mcPart->Position().X() <<", "<<mcPart->Position().Y()<<", "<<mcPart->Position().Z()<<", "<< std::endl;
     std::cout << " End X,Y,Z:   " <<mcPart->EndPosition().X() <<", "<<mcPart->EndPosition().Y()<<", "<<mcPart->EndPosition().Z()<<", "<< std::endl;
-    //for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
-    //{
-    //  std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
-    //}
+    if (abs(mcPart->PdgCode()) != 13)
+        continue;
+
+    _xb = mcPart->Position().X();
+    _yb = mcPart->Position().Y();
+    _zb = mcPart->Position().Z();
+    _tb = mcPart->Position().T();
+    _xe = mcPart->EndPosition().X();
+    _ye = mcPart->EndPosition().Y();
+    _ze = mcPart->EndPosition().Z();
+    _te = mcPart->EndPosition().T();
+
+    _pxb = mcPart->Momentum().X();
+    _pyb = mcPart->Momentum().Y();
+    _pzb = mcPart->Momentum().Z();
+    _pEb = mcPart->Momentum().T();
+    _pxe = mcPart->EndMomentum().X();
+    _pye = mcPart->EndMomentum().Y();
+    _pze = mcPart->EndMomentum().Z();
+    _pEe = mcPart->EndMomentum().T();
+
+    _pb = mcPart->Momentum().Vect().Mag();
+    _thetab = mcPart->Momentum().Theta();
+    _costhetab = mcPart->Momentum().CosTheta();
+    _phib = mcPart->Momentum().Phi();
+
+    _costhetazenithb = _pyb/_pb;
+    _thetazenithb = TMath::ACos(_costhetazenithb);
+    _phizenithb = TMath::ATan2(_pzb,-_pxb);
+
+    _numberTrajectoryPoints = mcPart->NumberTrajectoryPoints();
+
+    for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
+    {
+      _trajectoryX->Fill(mcPart->Position(iPoint).X());
+      _trajectoryY->Fill(mcPart->Position(iPoint).Y());
+      _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
+      //std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
+      auto vec3 = mcPart->Position(iPoint).Vect();
+      float pathLength = (vec3-mcPart->Position().Vect()).Mag();
+      float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
+      float mdEodx = -energyDiff/pathLength;
+      std::cout << "   l:    " << std::setw(12) <<pathLength <<" energyDiff: " << std::setw(12)<<energyDiff<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
+    }
+    _outtree->Fill();
   }
+  //for (const auto& simChan : simChanVec)
+  //{
+  //  simChan->Dump(std::cout);
+  //  std::cout << std::endl;
+  //}
   
 }
 
