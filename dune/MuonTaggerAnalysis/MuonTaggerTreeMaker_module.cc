@@ -34,6 +34,35 @@
 #include "TDatabasePDG.h"
 #include "TMath.h"
 
+class MinMaxFinder 
+{
+  private:
+    float _min;
+    float _max;
+  public:
+    MinMaxFinder();
+    void addPoint(float x);
+    float getMax() const {return _max;};
+    float getMin() const {return _min;};
+};
+
+MinMaxFinder::MinMaxFinder():
+    _min(1e20), _max(-1e20)
+{}
+
+void MinMaxFinder::addPoint(float x)
+{
+  if (x > _max)
+  {
+    _max = x;
+  }
+  if (x < _min)
+  {
+    _min = x;
+  }
+}
+
+
 namespace dune {
   class MuonTaggerTreeMaker;
 }
@@ -53,7 +82,7 @@ public:
   // Required functions.
   void analyze(art::Event const & e) override;
   virtual void beginJob() override;
-
+  virtual void endJob() override;
 
 private:
 
@@ -97,6 +126,15 @@ private:
   float _phizenithb;
 
   int _numberTrajectoryPoints;
+
+  MinMaxFinder _minMaxFinderTrajX;
+  MinMaxFinder _minMaxFinderTrajY;
+  MinMaxFinder _minMaxFinderTrajZ;
+  MinMaxFinder _minMaxFinderTrajT;
+
+  MinMaxFinder _minMaxFinderChanX;
+  MinMaxFinder _minMaxFinderChanY;
+  MinMaxFinder _minMaxFinderChanZ;
 };
 
 
@@ -165,14 +203,14 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
   for (const auto& mcPart : mcPartVec)
   {
-    double partStartMom = mcPart->Momentum().Mag()*1000.; //in MeV/c
+    //double partStartMom = mcPart->Momentum().Mag()*1000.; //in MeV/c
     //double partStartTheta = mcPart->Momentum().Vect().Theta()*180./M_PI; //in degrees
     //double partStartPhi = mcPart->Momentum().Vect().Phi()*180./M_PI; //in degrees
-    std::cout << "MC Particle: PDG ID: " << mcPart->PdgCode() << "Status: " << mcPart->StatusCode() << " momentum [MeV]: " << partStartMom;
+    //std::cout << "MC Particle: PDG ID: " << mcPart->PdgCode() << "Status: " << mcPart->StatusCode() << " momentum [MeV]: " << partStartMom;
     //std::cout << " Theta [deg]: "<< partStartTheta << " Phi [deg]: "<< partStartPhi  << "  " << std::endl;
-    std::cout << " Px,Py,Pz:    " <<mcPart->Momentum().X() <<", "<<mcPart->Momentum().Y()<<", "<<mcPart->Momentum().Z()<<", "<< std::endl;
-    std::cout << " Start X,Y,Z: " <<mcPart->Position().X() <<", "<<mcPart->Position().Y()<<", "<<mcPart->Position().Z()<<", "<< std::endl;
-    std::cout << " End X,Y,Z:   " <<mcPart->EndPosition().X() <<", "<<mcPart->EndPosition().Y()<<", "<<mcPart->EndPosition().Z()<<", "<< std::endl;
+    //std::cout << " Px,Py,Pz:    " <<mcPart->Momentum().X() <<", "<<mcPart->Momentum().Y()<<", "<<mcPart->Momentum().Z()<<", "<< std::endl;
+    //std::cout << " Start X,Y,Z: " <<mcPart->Position().X() <<", "<<mcPart->Position().Y()<<", "<<mcPart->Position().Z()<<", "<< std::endl;
+    //std::cout << " End X,Y,Z:   " <<mcPart->EndPosition().X() <<", "<<mcPart->EndPosition().Y()<<", "<<mcPart->EndPosition().Z()<<", "<< std::endl;
     if (abs(mcPart->PdgCode()) != 13)
         continue;
 
@@ -211,21 +249,52 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
       _trajectoryY->Fill(mcPart->Position(iPoint).Y());
       _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
       //std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
-      auto vec3 = mcPart->Position(iPoint).Vect();
-      float pathLength = (vec3-mcPart->Position().Vect()).Mag();
-      float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
-      float mdEodx = -energyDiff/pathLength;
-      std::cout << "   l:    " << std::setw(12) <<pathLength <<" energyDiff: " << std::setw(12)<<energyDiff<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
+      //auto vec3 = mcPart->Position(iPoint).Vect();
+      //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
+      //float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
+      //float mdEodx = -energyDiff/pathLength;
+      //std::cout << "   l:    " << std::setw(12) <<pathLength <<" energyDiff: " << std::setw(12)<<energyDiff<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
+      _minMaxFinderTrajX.addPoint(mcPart->Position(iPoint).X());
+      _minMaxFinderTrajY.addPoint(mcPart->Position(iPoint).Y());
+      _minMaxFinderTrajZ.addPoint(mcPart->Position(iPoint).Z());
+      _minMaxFinderTrajT.addPoint(mcPart->Position(iPoint).T());
     }
-    _outtree->Fill();
   }
-  //for (const auto& simChan : simChanVec)
-  //{
-  //  simChan->Dump(std::cout);
-  //  std::cout << std::endl;
-  //}
+  for (const auto& simChan : simChanVec)
+  {
+    const std::map< unsigned short, std::vector< sim::IDE > > & tdcidemap = simChan->TDCIDEMap();
+    for(auto& tdcidepair : tdcidemap)
+    {
+      //auto tdc = tdcidepair.first;
+      auto ides = tdcidepair.second;
+      //std::cout << "tdc: " << tdc << ", ide: " << std::endl;
+      for (const auto& ide : ides)
+      {
+        //std::cout << "  x,y,z" << ide.x <<", " << ide.y << ", "<< ide.z << std::endl;
+        _minMaxFinderChanX.addPoint(ide.x);
+        _minMaxFinderChanY.addPoint(ide.x);
+        _minMaxFinderChanZ.addPoint(ide.x);
+      }
+    }
+    //simChan->Dump(std::cout);
+    //std::cout << std::endl;
+  }
+
+  _outtree->Fill();
   
 }
 
+void dune::MuonTaggerTreeMaker::endJob()
+{
+  std::cout << "trajectory x in: "<< _minMaxFinderTrajX.getMin() << ", " << _minMaxFinderTrajX.getMax() << std::endl;
+  std::cout << "trajectory y in: "<< _minMaxFinderTrajY.getMin() << ", " << _minMaxFinderTrajY.getMax() << std::endl;
+  std::cout << "trajectory z in: "<< _minMaxFinderTrajZ.getMin() << ", " << _minMaxFinderTrajZ.getMax() << std::endl;
+  std::cout << "trajectory t in: "<< _minMaxFinderTrajT.getMin() << ", " << _minMaxFinderTrajT.getMax() << std::endl;
+
+  std::cout << std::endl;
+  std::cout << "simchannelide x in: "<< _minMaxFinderChanX.getMin() << ", " << _minMaxFinderChanX.getMax() << std::endl;
+  std::cout << "simchannelide y in: "<< _minMaxFinderChanY.getMin() << ", " << _minMaxFinderChanY.getMax() << std::endl;
+  std::cout << "simchannelide z in: "<< _minMaxFinderChanZ.getMin() << ", " << _minMaxFinderChanZ.getMax() << std::endl;
+}
 
 DEFINE_ART_MODULE(dune::MuonTaggerTreeMaker)
