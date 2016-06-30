@@ -22,10 +22,14 @@
 #include <iomanip>
 #include <string>
 
+#include "larcore/Geometry/Geometry.h"
+#include "larcore/Geometry/TPCGeo.h"
+#include "larcore/Geometry/AuxDetGeo.h"
+
 #include "SimulationBase/MCTruth.h"
 #include "SimulationBase/MCParticle.h"
-#include "larcore/Geometry/Geometry.h"
 #include "larsim/Simulation/SimChannel.h"
+#include "larsim/Simulation/AuxDetSimChannel.h"
 
 #include "TH1D.h"
 #include "TH2D.h"
@@ -46,6 +50,17 @@ class MinMaxFinder
     float getMin() const {return _min;};
 };
 
+bool inATPC(const TLorentzVector& v, const geo::Geometry& geom)
+{
+  for(auto& tpc: geom.IterateTPCs())
+  {
+    if (tpc.ContainsPosition(v.Vect()))
+      return true;
+  }
+  return false;
+}
+
+
 MinMaxFinder::MinMaxFinder():
     _min(1e20), _max(-1e20)
 {}
@@ -61,7 +76,6 @@ void MinMaxFinder::addPoint(float x)
     _min = x;
   }
 }
-
 
 namespace dune {
   class MuonTaggerTreeMaker;
@@ -89,8 +103,10 @@ private:
   // Declare member data here.
   art::InputTag _mcParticleTag;
   art::InputTag _simChannelTag;
+  art::InputTag _auxDetSimChannelTag;
 
   TTree* _outtree;
+  TTree* _outtreeTrajPoints;
   TH1F* _trajectoryX;
   TH1F* _trajectoryY;
   TH1F* _trajectoryZ;
@@ -127,6 +143,11 @@ private:
 
   int _numberTrajectoryPoints;
 
+  // treeTrajPoints data members
+  float _tp_p;
+  float _tp_E;
+  float _tp_dEdx;
+
   MinMaxFinder _minMaxFinderTrajX;
   MinMaxFinder _minMaxFinderTrajY;
   MinMaxFinder _minMaxFinderTrajZ;
@@ -147,6 +168,8 @@ dune::MuonTaggerTreeMaker::MuonTaggerTreeMaker(fhicl::ParameterSet const & p)
   std::cout << "_mcParticleTag: " << _mcParticleTag << std::endl;
   _simChannelTag = p.get<art::InputTag>("simChannelTag");
   std::cout << "_simChannelTag: " << _simChannelTag << std::endl;
+  _auxDetSimChannelTag = p.get<art::InputTag>("auxDetSimChannelTag");
+  std::cout << "_auxDetSimChannelTag: " << _auxDetSimChannelTag << std::endl;
 }
 
 void dune::MuonTaggerTreeMaker::beginJob()
@@ -183,9 +206,42 @@ void dune::MuonTaggerTreeMaker::beginJob()
 
   _outtree->Branch("numberTrajectoryPoints",&_numberTrajectoryPoints,"numberTrajectoryPoints/I");
 
+  //////////////// Trajectory Tree
+
+  _outtreeTrajPoints = tfs->make<TTree>("treeTrajPoints","treeTrajPoints");
+  _outtreeTrajPoints->Branch("pb",&_pb,"pb/F");
+  _outtreeTrajPoints->Branch("thetazenithb",&_thetazenithb,"thetazenithb/F");
+  _outtreeTrajPoints->Branch("p",&_tp_p,"p/F");
+  _outtreeTrajPoints->Branch("E",&_tp_E,"E/F");
+  _outtreeTrajPoints->Branch("dEdx",&_tp_dEdx,"dEdx/F");
+
+  /////////////// Histos
+
   _trajectoryX = tfs->make<TH1F>("trajectoryX","",2000,-5000,5000);
   _trajectoryY = tfs->make<TH1F>("trajectoryY","",2000,-5000,1000);
   _trajectoryZ = tfs->make<TH1F>("trajectoryZ","",2000,-5000,5000);
+
+  ////// Experiment w/ Geometry
+
+  art::ServiceHandle<geo::Geometry> geom;
+  std::cout << "Geometry: Number of TPCs:    " << geom->TotalNTPC() << std::endl;
+  std::cout << "Geometry: Number of OpDets:  " << geom->NOpDets() << std::endl;
+  std::cout << "Geometry: Number of AuxDets: " << geom->NAuxDets() << std::endl;
+
+  for(auto& tpc: geom->IterateTPCs())
+  {
+    std::cout << "TPC X in: " << tpc.MinX() << ", " << tpc.MaxX() << std::endl;
+    std::cout << "TPC Y in: " << tpc.MinY() << ", " << tpc.MaxY() << std::endl;
+    std::cout << "TPC Z in: " << tpc.MinZ() << ", " << tpc.MaxZ() << std::endl;
+  }
+
+  std::vector<geo::AuxDetGeo *> const & auxDetGeos = geom->AuxDetGeoVec();
+  for(auto& auxDetGeoPtr: auxDetGeos)
+  {
+    //std::cout << "AuxDet Named: '" << auxDetGeoPtr->Name() << "'" << std::endl;
+    std::cout << "AuxDet Length: '" << auxDetGeoPtr->Length() << "'" << std::endl;
+  }
+
 }
 
 void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
@@ -201,13 +257,15 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
   std::vector<art::Ptr<sim::SimChannel>> simChanVec;
   art::fill_ptr_vector(simChanVec, simChanHand);
 
+  auto auxDetSimChanHand = e.getValidHandle<std::vector<sim::AuxDetSimChannel>>(_auxDetSimChannelTag);
+  std::vector<art::Ptr<sim::AuxDetSimChannel>> auxDetSimChanVec;
+  art::fill_ptr_vector(auxDetSimChanVec, auxDetSimChanHand);
+
+  art::ServiceHandle<geo::Geometry> geom;
+
   for (const auto& mcPart : mcPartVec)
   {
-    //double partStartMom = mcPart->Momentum().Mag()*1000.; //in MeV/c
-    //double partStartTheta = mcPart->Momentum().Vect().Theta()*180./M_PI; //in degrees
-    //double partStartPhi = mcPart->Momentum().Vect().Phi()*180./M_PI; //in degrees
-    //std::cout << "MC Particle: PDG ID: " << mcPart->PdgCode() << "Status: " << mcPart->StatusCode() << " momentum [MeV]: " << partStartMom;
-    //std::cout << " Theta [deg]: "<< partStartTheta << " Phi [deg]: "<< partStartPhi  << "  " << std::endl;
+    //std::cout << "MC Particle: PDG ID: " << mcPart->PdgCode() << "Status: " << mcPart->StatusCode() << " momentum [GeV]: " << mcPart->Momentum().Mag();
     //std::cout << " Px,Py,Pz:    " <<mcPart->Momentum().X() <<", "<<mcPart->Momentum().Y()<<", "<<mcPart->Momentum().Z()<<", "<< std::endl;
     //std::cout << " Start X,Y,Z: " <<mcPart->Position().X() <<", "<<mcPart->Position().Y()<<", "<<mcPart->Position().Z()<<", "<< std::endl;
     //std::cout << " End X,Y,Z:   " <<mcPart->EndPosition().X() <<", "<<mcPart->EndPosition().Y()<<", "<<mcPart->EndPosition().Z()<<", "<< std::endl;
@@ -245,21 +303,34 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
     for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
     {
+      if (! inATPC(mcPart->Position(iPoint),*geom))
       _trajectoryX->Fill(mcPart->Position(iPoint).X());
       _trajectoryY->Fill(mcPart->Position(iPoint).Y());
       _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
       //std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
-      //auto vec3 = mcPart->Position(iPoint).Vect();
-      //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
-      //float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
-      //float mdEodx = -energyDiff/pathLength;
-      //std::cout << "   l:    " << std::setw(12) <<pathLength <<" energyDiff: " << std::setw(12)<<energyDiff<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
+      auto vec3 = mcPart->Position(iPoint).Vect();
       _minMaxFinderTrajX.addPoint(mcPart->Position(iPoint).X());
       _minMaxFinderTrajY.addPoint(mcPart->Position(iPoint).Y());
       _minMaxFinderTrajZ.addPoint(mcPart->Position(iPoint).Z());
       _minMaxFinderTrajT.addPoint(mcPart->Position(iPoint).T());
+      if (iPoint > 0)
+      {
+        //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
+        //float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
+
+        float dE = mcPart->Momentum(iPoint).E() - mcPart->Momentum(iPoint-1).E();
+        float dx = (mcPart->Position(iPoint).Vect() - mcPart->Position(iPoint-1).Vect()).Mag();
+        float mdEodx = - dE/dx;
+        //std::cout << "     dE:    " << std::setw(12) <<dE <<" dx: " << std::setw(12)<<dx<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
+
+        _tp_p = mcPart->Position(iPoint).Vect().Mag();
+        _tp_E = mcPart->Momentum(iPoint).E();
+        _tp_dEdx = mdEodx;
+        _outtreeTrajPoints->Fill();
+      }
     }
-  }
+  } // for mcPartVec
+
   for (const auto& simChan : simChanVec)
   {
     const std::map< unsigned short, std::vector< sim::IDE > > & tdcidemap = simChan->TDCIDEMap();
@@ -278,7 +349,19 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     }
     //simChan->Dump(std::cout);
     //std::cout << std::endl;
-  }
+  } // for simChanVec
+
+  //for (const auto& auxDetSimChan : auxDetSimChanVec)
+  //{
+  //  std::vector< sim::AuxDetIDE > const & auxDetIDEs = auxDetSimChan->AuxDetIDEs();
+  //  for(const sim::AuxDetIDE& ide : auxDetIDEs)
+  //  {
+  //    std::cout << "auxDetIDE:\n";
+  //    std::cout << "  entry x,y,z: " << ide.entryX << ", " << ide.entryZ << ", " << ide.entryZ << std::endl;
+  //    std::cout << "  exit  x,y,z: " << ide.exitX << ", " << ide.exitZ << ", " << ide.exitZ << std::endl;
+  //  }
+
+  //} // for auxDetSimChanVec
 
   _outtree->Fill();
   

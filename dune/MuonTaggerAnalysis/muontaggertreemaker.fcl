@@ -9,13 +9,14 @@ services:
   #SimpleMemoryCheck:     { ignoreTotal: 1 } # default is one
   RandomNumberGenerator: {} #ART native random number generator
   message:              @local::dune_message_services_prod_debug
-                        @table::protodune_services
+                        @table::protodune_simulation_services
 } # services
 
 source:
 {
   module_type: RootInput
   fileNames: ["/scratch/jhugon/AntiMuonCutEvents_LSU_protodune_1file_0_20160628T184031_gen_g4.root"]
+  #maxEvents:  10
   maxEvents:  -1
 }
 
@@ -28,6 +29,7 @@ physics:
       module_type:     "MuonTaggerTreeMaker"
       mcParticleTag: "largeant"
       simChannelTag: "largeant"
+      auxDetSimChannelTag: "largeant"
     }
   }
 
