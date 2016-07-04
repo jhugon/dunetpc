@@ -30,6 +30,18 @@ physics:
       mcParticleTag: "largeant"
       simChannelTag: "largeant"
       auxDetSimChannelTag: "largeant"
+
+      frontDetectorXmin: -360
+      frontDetectorXmax: 360
+      frontDetectorYmin: 0
+      frontDetectorYmax: 608
+      frontDetectorZ: -1.5
+
+      backDetectorXmin: -360
+      backDetectorXmax: 360
+      backDetectorYmin: 0
+      backDetectorYmax: 608
+      backDetectorZ: 696.2
     }
   }
 

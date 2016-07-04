@@ -109,6 +109,18 @@ private:
   art::InputTag _simChannelTag;
   art::InputTag _auxDetSimChannelTag;
 
+  float _frontDetectorXmin;
+  float _frontDetectorXmax;
+  float _frontDetectorYmin;
+  float _frontDetectorYmax;
+  float _frontDetectorZ;
+
+  float _backDetectorXmin;
+  float _backDetectorXmax;
+  float _backDetectorYmin;
+  float _backDetectorYmax;
+  float _backDetectorZ;
+
   TTree* _outtree;
   TTree* _outtreeTrajPoints;
   TH1F* _trajectoryX;
@@ -147,6 +159,9 @@ private:
 
   int _numberTrajectoryPoints;
 
+  bool _hitsFrontDet;
+  bool _hitsBackDet;
+
   // treeTrajPoints data members
   float _tp_p;
   float _tp_E;
@@ -162,6 +177,9 @@ private:
   MinMaxFinder _minMaxFinderChanX;
   MinMaxFinder _minMaxFinderChanY;
   MinMaxFinder _minMaxFinderChanZ;
+
+  // private functions
+  bool hitsDetectorPlane(const simb::MCParticle& part, bool backDetector = false); // if false, front detector
 };
 
 
@@ -176,6 +194,24 @@ dune::MuonTaggerTreeMaker::MuonTaggerTreeMaker(fhicl::ParameterSet const & p)
   std::cout << "_simChannelTag: " << _simChannelTag << std::endl;
   _auxDetSimChannelTag = p.get<art::InputTag>("auxDetSimChannelTag");
   std::cout << "_auxDetSimChannelTag: " << _auxDetSimChannelTag << std::endl;
+
+  _frontDetectorXmin = p.get<float>("frontDetectorXmin");
+  _frontDetectorXmax = p.get<float>("frontDetectorXmax");
+  _frontDetectorYmin = p.get<float>("frontDetectorYmin");
+  _frontDetectorYmax = p.get<float>("frontDetectorYmax");
+  _frontDetectorZ = p.get<float>("frontDetectorZ");
+  std::cout << "front detector X: " << _frontDetectorXmin << " - " << _frontDetectorXmax << std::endl;
+  std::cout << "front detector Y: " << _frontDetectorYmin << " - " << _frontDetectorYmax << std::endl;
+  std::cout << "front detector Z: " << _frontDetectorZ << std::endl;
+
+  _backDetectorXmin = p.get<float>("backDetectorXmin");
+  _backDetectorXmax = p.get<float>("backDetectorXmax");
+  _backDetectorYmin = p.get<float>("backDetectorYmin");
+  _backDetectorYmax = p.get<float>("backDetectorYmax");
+  _backDetectorZ = p.get<float>("backDetectorZ");
+  std::cout << "back detector X: " << _backDetectorXmin << " - " << _backDetectorXmax << std::endl;
+  std::cout << "back detector Y: " << _backDetectorYmin << " - " << _backDetectorYmax << std::endl;
+  std::cout << "back detector Z: " << _backDetectorZ << std::endl;
 }
 
 void dune::MuonTaggerTreeMaker::beginJob()
@@ -211,6 +247,9 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _outtree->Branch("phizenithb",&_phizenithb,"phizenithb/F");
 
   _outtree->Branch("numberTrajectoryPoints",&_numberTrajectoryPoints,"numberTrajectoryPoints/I");
+
+  _outtree->Branch("hitsFrontDet",&_hitsFrontDet,"hitsFrontDet/O");
+  _outtree->Branch("hitsBackDet",&_hitsBackDet,"hitsBackDet/O");
 
   //////////////// Trajectory Tree
 
@@ -296,6 +335,9 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     //std::cout << " End X,Y,Z:   " <<mcPart->EndPosition().X() <<", "<<mcPart->EndPosition().Y()<<", "<<mcPart->EndPosition().Z()<<", "<< std::endl;
     if (abs(mcPart->PdgCode()) != 13)
         continue;
+
+    _hitsFrontDet = hitsDetectorPlane(*mcPart,false); // front
+    _hitsBackDet = hitsDetectorPlane(*mcPart,true); // back
 
     _xb = mcPart->Position().X();
     _yb = mcPart->Position().Y();
@@ -409,6 +451,124 @@ void dune::MuonTaggerTreeMaker::endJob()
   std::cout << "simchannelide x in: "<< _minMaxFinderChanX.getMin() << ", " << _minMaxFinderChanX.getMax() << std::endl;
   std::cout << "simchannelide y in: "<< _minMaxFinderChanY.getMin() << ", " << _minMaxFinderChanY.getMax() << std::endl;
   std::cout << "simchannelide z in: "<< _minMaxFinderChanZ.getMin() << ", " << _minMaxFinderChanZ.getMax() << std::endl;
+}
+
+bool dune::MuonTaggerTreeMaker::hitsDetectorPlane(const simb::MCParticle& part, bool backDetector) // if false, front detector
+{
+//  std::cout << "hitsDetectorPlane starting ";
+  if (backDetector)
+  {
+//    std::cout << "on back detector..." << std::endl;
+  }
+  else
+  {
+//    std::cout << "on front detector..." << std::endl;
+  }
+  float zdet = _frontDetectorZ;
+  if (backDetector)
+    zdet = _backDetectorZ;
+
+  const simb::MCTrajectory& traj = part.Trajectory();
+  const unsigned nTrajPoints = traj.size();
+  float beginZ = traj.Z(0);
+  float endZ = traj.Z(nTrajPoints - 1);
+  bool backwards = false;
+  if (beginZ > endZ)
+  {
+//    std::cout << "trajectory is backwards " << std::endl;
+    backwards = true;
+  }
+  // Check that pass through detector
+  if (backwards)
+  {
+    if(endZ > zdet || beginZ < zdet)
+    {
+//        std::cout << "trajectory does not cross zdet: " << zdet << " beginZ: " << beginZ << " endZ: " << endZ << std::endl;
+        return false;
+    }
+  }
+  else // forwards
+  {
+    if(beginZ > zdet || endZ < zdet)
+    {
+//        std::cout << "trajectory does not cross zdet: " << zdet << " beginZ: " << beginZ << " endZ: " << endZ << std::endl;
+        return false;
+    }
+  }
+//  std::cout << "trajectory does cross zdet: " << zdet << " beginZ: " << beginZ << " endZ: " << endZ << std::endl;
+  // find iPoint where cross detector in z
+  unsigned iCrossZ = -1;
+  unsigned iCrossZLast = -1;
+  for(unsigned iPoint = 1; iPoint < nTrajPoints; iPoint++)
+  {
+    float z = traj.Z(iPoint);
+    float zLast = traj.Z(iPoint-1);
+    if(backwards)
+    {
+      if(zLast > zdet && z < zdet)
+      {
+        iCrossZ = iPoint;
+        iCrossZLast = iPoint-1;
+      }
+    }
+    else // forwards
+    {
+      if(z > zdet && zLast < zdet)
+      {
+        iCrossZ = iPoint;
+        iCrossZLast = iPoint-1;
+      }
+    } // else
+  } // for iPoint
+//  std::cout << "iCrossZ : " << iCrossZ<< "   "<< traj.Z(iCrossZ) << " iCrossZLast: " << iCrossZLast<< "   "<< traj.Z(iCrossZLast) << std::endl;
+  if (iCrossZ > 0 && iCrossZLast > 0)
+  {
+    float xMinDet = _frontDetectorXmin;
+    float xMaxDet = _frontDetectorXmax;
+    float yMinDet = _frontDetectorYmin;
+    float yMaxDet = _frontDetectorYmax;
+    if (backDetector)
+    {
+      xMinDet = _backDetectorXmin;
+      xMaxDet = _backDetectorXmax;
+      yMinDet = _backDetectorYmin;
+      yMaxDet = _backDetectorYmax;
+    }
+    // Fuzzily say that we hit the detector if either point is in the detector's x,y limits
+    float x = traj.X(iCrossZ);
+    float y = traj.Y(iCrossZ);
+    if (xMinDet < x && xMaxDet > x && yMinDet < y && yMaxDet > y)
+    {
+ //     std::cout << "iPointZ ";
+ //     std::cout << "x,y: " <<x << ", " << y << " where in the detector limits x: ("<<xMinDet << ", "<< xMaxDet<<") y: ("<< yMinDet<< ", " << yMaxDet<<")";
+ //     std::cout << " Point Z: " << traj.Z(iCrossZ) << std::endl;
+      return true;
+    }
+    x = traj.X(iCrossZLast);
+    y = traj.Y(iCrossZLast);
+    if (xMinDet < x && xMaxDet > x && yMinDet < y && yMaxDet > y)
+    {
+ //     std::cout << "iPointZLast ";
+ //     std::cout << "x,y: " <<x << ", " << y << " where in the detector limits x: ("<<xMinDet << ", "<< xMaxDet<<") y: ("<< yMinDet<< ", " << yMaxDet<<")";
+ //     std::cout << " Point Z: " << traj.Z(iCrossZLast) << std::endl;
+      return true;
+    }
+//    x = traj.X(iCrossZ);
+//    y = traj.Y(iCrossZ);
+//    float z = traj.Z(iCrossZ);
+//    std::cout << "Not in detector: x,y,z: " <<x << ", " << y << ", "<<z <<std::endl;
+//    x = traj.X(iCrossZLast);
+//    y = traj.Y(iCrossZLast);
+//    z = traj.Z(iCrossZLast);
+//    std::cout << "Not in detector: x,y,z: " <<x << ", " << y << ", "<<z <<std::endl;
+//    std::cout << " where in the detector limits x: ("<<xMinDet << ", "<< xMaxDet<<") y: ("<< yMinDet<< ", " << yMaxDet<<")" << std::endl;
+    return false;
+  }
+  else
+  {
+    std::cout << "Error: Could not find where trajectory crosses detector in Z" << std::endl;
+    return false;
+  }
 }
 
 DEFINE_ART_MODULE(dune::MuonTaggerTreeMaker)
