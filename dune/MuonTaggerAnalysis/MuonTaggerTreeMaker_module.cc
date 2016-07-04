@@ -50,16 +50,20 @@ class MinMaxFinder
     float getMin() const {return _min;};
 };
 
-bool inATPC(const TLorentzVector& v, const geo::Geometry& geom)
+bool inATPC(const TLorentzVector& v, const geo::Geometry& geom, float minTPCWidth=20.)
 {
   for(auto& tpc: geom.IterateTPCs())
   {
-    if (tpc.ContainsPosition(v.Vect()))
-      return true;
+    if (tpc.HalfWidth()*2 > minTPCWidth)
+    {
+      if (tpc.ContainsPosition(v.Vect()))
+      {
+        return true;
+      }
+    }
   }
   return false;
 }
-
 
 MinMaxFinder::MinMaxFinder():
     _min(1e20), _max(-1e20)
@@ -147,6 +151,8 @@ private:
   float _tp_p;
   float _tp_E;
   float _tp_dEdx;
+  bool _tp_inTPC;
+  bool _tp_inWideTPC;
 
   MinMaxFinder _minMaxFinderTrajX;
   MinMaxFinder _minMaxFinderTrajY;
@@ -214,6 +220,8 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _outtreeTrajPoints->Branch("p",&_tp_p,"p/F");
   _outtreeTrajPoints->Branch("E",&_tp_E,"E/F");
   _outtreeTrajPoints->Branch("dEdx",&_tp_dEdx,"dEdx/F");
+  _outtreeTrajPoints->Branch("inTPC",&_tp_inTPC,"inTPC/O");
+  _outtreeTrajPoints->Branch("inWideTPC",&_tp_inWideTPC,"inWideTPC/O");
 
   /////////////// Histos
 
@@ -224,15 +232,32 @@ void dune::MuonTaggerTreeMaker::beginJob()
   ////// Experiment w/ Geometry
 
   art::ServiceHandle<geo::Geometry> geom;
-  std::cout << "Geometry: Number of TPCs:    " << geom->TotalNTPC() << std::endl;
-  std::cout << "Geometry: Number of OpDets:  " << geom->NOpDets() << std::endl;
-  std::cout << "Geometry: Number of AuxDets: " << geom->NAuxDets() << std::endl;
+  std::cout << "Geometry: Detector Name:      '" << geom->DetectorName() << "'" << std::endl;
+  std::cout << "Geometry: Number of Cryostats: " << geom->Ncryostats() << std::endl;
+  std::cout << "Geometry: Number of TPCs:      " << geom->TotalNTPC() << std::endl;
+  std::cout << "Geometry: Number of OpDets:    " << geom->NOpDets() << std::endl;
+  std::cout << "Geometry: Number of AuxDets:   " << geom->NAuxDets() << std::endl;
+
+  for(auto& cryostat: geom->IterateCryostats())
+  {
+    std::cout << "Cryostat mass: " << cryostat.Mass() << std::endl;
+    std::cout << "Cryostat width:  " << 2*cryostat.HalfWidth() << std::endl;
+    std::cout << "Cryostat height: " << 2*cryostat.HalfHeight() << std::endl;
+    std::cout << "Cryostat length: " << cryostat.Length() << std::endl;
+  }
 
   for(auto& tpc: geom->IterateTPCs())
   {
     std::cout << "TPC X in: " << tpc.MinX() << ", " << tpc.MaxX() << std::endl;
     std::cout << "TPC Y in: " << tpc.MinY() << ", " << tpc.MaxY() << std::endl;
     std::cout << "TPC Z in: " << tpc.MinZ() << ", " << tpc.MaxZ() << std::endl;
+    std::cout << "  TPC width: " << tpc.HalfWidth()*2 << std::endl;
+    std::cout << "  TPC height: " << tpc.HalfHeight()*2 << std::endl;
+    std::cout << "  TPC length: " << tpc.Length() << std::endl;
+    std::cout << "  TPC active width:  " << tpc.ActiveHalfWidth()*2 << std::endl;
+    std::cout << "  TPC active height: " << tpc.ActiveHalfHeight()*2 << std::endl;
+    std::cout << "  TPC active length: " << tpc.ActiveLength() << std::endl;
+    std::cout << "  TPC active mass: " << tpc.ActiveMass() << std::endl;
   }
 
   std::vector<geo::AuxDetGeo *> const & auxDetGeos = geom->AuxDetGeoVec();
@@ -303,16 +328,20 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
     for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
     {
-      if (! inATPC(mcPart->Position(iPoint),*geom))
-      _trajectoryX->Fill(mcPart->Position(iPoint).X());
-      _trajectoryY->Fill(mcPart->Position(iPoint).Y());
-      _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
-      //std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
-      auto vec3 = mcPart->Position(iPoint).Vect();
-      _minMaxFinderTrajX.addPoint(mcPart->Position(iPoint).X());
-      _minMaxFinderTrajY.addPoint(mcPart->Position(iPoint).Y());
-      _minMaxFinderTrajZ.addPoint(mcPart->Position(iPoint).Z());
-      _minMaxFinderTrajT.addPoint(mcPart->Position(iPoint).T());
+      bool isInATPC = inATPC(mcPart->Position(iPoint),*geom,0.);
+      bool isInAWideTPC = inATPC(mcPart->Position(iPoint),*geom,20.);
+      if (isInAWideTPC)
+      {
+        _trajectoryX->Fill(mcPart->Position(iPoint).X());
+        _trajectoryY->Fill(mcPart->Position(iPoint).Y());
+        _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
+        //std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
+        auto vec3 = mcPart->Position(iPoint).Vect();
+        _minMaxFinderTrajX.addPoint(mcPart->Position(iPoint).X());
+        _minMaxFinderTrajY.addPoint(mcPart->Position(iPoint).Y());
+        _minMaxFinderTrajZ.addPoint(mcPart->Position(iPoint).Z());
+        _minMaxFinderTrajT.addPoint(mcPart->Position(iPoint).T());
+      }
       if (iPoint > 0)
       {
         //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
@@ -323,9 +352,11 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
         float mdEodx = - dE/dx;
         //std::cout << "     dE:    " << std::setw(12) <<dE <<" dx: " << std::setw(12)<<dx<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
 
-        _tp_p = mcPart->Position(iPoint).Vect().Mag();
+        _tp_p = mcPart->Momentum(iPoint).Vect().Mag();
         _tp_E = mcPart->Momentum(iPoint).E();
         _tp_dEdx = mdEodx;
+        _tp_inTPC = isInATPC;
+        _tp_inWideTPC = isInAWideTPC;
         _outtreeTrajPoints->Fill();
       }
     }
