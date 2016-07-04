@@ -49,7 +49,7 @@ hists = plotVariable(tree,c,"thetazenithb/TMath::Pi()*180.",50,0.,180.,"#theta_{
   #{
   #  "title":"p #leq 1 GeV/c",
   #  "cuts":"pb <= 1.",
-  #  "color":root.kBlue,
+  #  "color":root.kBlack,
   #},
   #{
   #  "title":"1 GeV/c < p < 3 GeV/c",
@@ -64,7 +64,7 @@ hists = plotVariable(tree,c,"thetazenithb/TMath::Pi()*180.",50,0.,180.,"#theta_{
   {
     "title":"All",
     "cuts":"",
-    "color":root.kBlue,
+    "color":root.kBlack,
   },
   {
     "title":"Hit Front Det",
@@ -79,7 +79,7 @@ hists = plotVariable(tree,c,"thetazenithb/TMath::Pi()*180.",50,0.,180.,"#theta_{
   {
     "title":"Hit Both Det",
     "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kCyan,
+    "color":root.kBlue,
   },
 ])
 
@@ -87,7 +87,7 @@ hists = plotVariable(tree,c,"thetab/TMath::Pi()*180.",50,0.,180.,"#theta_{z} [#c
   #{
   #  "title":"p #leq 1 GeV/c",
   #  "cuts":"pb <= 1.",
-  #  "color":root.kBlue,
+  #  "color":root.kBlack,
   #},
   #{
   #  "title":"1 GeV/c < p < 3 GeV/c",
@@ -102,7 +102,7 @@ hists = plotVariable(tree,c,"thetab/TMath::Pi()*180.",50,0.,180.,"#theta_{z} [#c
   {
     "title":"All",
     "cuts":"",
-    "color":root.kBlue,
+    "color":root.kBlack,
   },
   {
     "title":"Hit Front Det",
@@ -117,43 +117,53 @@ hists = plotVariable(tree,c,"thetab/TMath::Pi()*180.",50,0.,180.,"#theta_{z} [#c
   {
     "title":"Hit Both Det",
     "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kCyan,
+    "color":root.kBlue,
   },
 ])
 
 hists = plotVariable(tree,c,"phizenithb/TMath::Pi()*180.",50,-180.,180,"#phi_{Zenith} [#circ] ","Events/bin","phizenithb.png",[
   {
-    "title":"p #leq 1 GeV/c",
-    "cuts":"pb <= 1.",
-    "color":root.kBlue,
+    "title":"All",
+    "cuts":"",
+    "color":root.kBlack,
   },
   {
-    "title":"1 GeV/c < p < 3 GeV/c",
-    "cuts":"pb > 1. && pb < 3.",
+    "title":"Hit Front Det",
+    "cuts":"hitsFrontDet",
+    "color":root.kGreen,
+  },
+  {
+    "title":"Hit Back Det",
+    "cuts":"hitsBackDet",
     "color":root.kRed,
   },
   {
-    "title":"p \geq 3 GeV/c",
-    "cuts":"pb >= 3.",
-    "color":root.kGreen,
+    "title":"Hit Both Det",
+    "cuts":"hitsFrontDet && hitsBackDet",
+    "color":root.kBlue,
   },
 ])
 
 hists = plotVariable(tree,c,"phib/TMath::Pi()*180.",50,-180,180,"#phi_{z} [#circ]","Events/bin","phib.png",[
   {
-    "title":"p #leq 1 GeV/c",
-    "cuts":"pb <= 1.",
-    "color":root.kBlue,
+    "title":"All",
+    "cuts":"",
+    "color":root.kBlack,
   },
   {
-    "title":"1 GeV/c < p < 3 GeV/c",
-    "cuts":"pb > 1. && pb < 3.",
+    "title":"Hit Front Det",
+    "cuts":"hitsFrontDet",
+    "color":root.kGreen,
+  },
+  {
+    "title":"Hit Back Det",
+    "cuts":"hitsBackDet",
     "color":root.kRed,
   },
   {
-    "title":"p \geq 3 GeV/c",
-    "cuts":"pb >= 3.",
-    "color":root.kGreen,
+    "title":"Hit Both Det",
+    "cuts":"hitsFrontDet && hitsBackDet",
+    "color":root.kBlue,
   },
 ])
 
@@ -161,7 +171,7 @@ hists = plotVariable(tree,c,"pb",50,0.,100,"p [GeV/c]","Events/bin","momentum.pn
   {
     "title":"All",
     "cuts":"",
-    "color":root.kBlue,
+    "color":root.kBlack,
   },
   {
     "title":"Hit Front Det",
@@ -176,6 +186,6 @@ hists = plotVariable(tree,c,"pb",50,0.,100,"p [GeV/c]","Events/bin","momentum.pn
   {
     "title":"Hit Both Det",
     "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kCyan,
+    "color":root.kBlue,
   },
 ],logy=True)

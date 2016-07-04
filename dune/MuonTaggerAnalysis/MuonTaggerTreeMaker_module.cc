@@ -178,6 +178,10 @@ private:
   MinMaxFinder _minMaxFinderChanY;
   MinMaxFinder _minMaxFinderChanZ;
 
+  MinMaxFinder _minMaxFinderXb; // b means begin
+  MinMaxFinder _minMaxFinderYb;
+  MinMaxFinder _minMaxFinderZb;
+
   // private functions
   bool hitsDetectorPlane(const simb::MCParticle& part, bool backDetector = false); // if false, front detector
 };
@@ -343,6 +347,11 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     _yb = mcPart->Position().Y();
     _zb = mcPart->Position().Z();
     _tb = mcPart->Position().T();
+    _minMaxFinderXb.addPoint(_xb);
+    _minMaxFinderYb.addPoint(_yb);
+    _minMaxFinderZb.addPoint(_zb);
+
+
     _xe = mcPart->EndPosition().X();
     _ye = mcPart->EndPosition().Y();
     _ze = mcPart->EndPosition().Z();
@@ -451,6 +460,11 @@ void dune::MuonTaggerTreeMaker::endJob()
   std::cout << "simchannelide x in: "<< _minMaxFinderChanX.getMin() << ", " << _minMaxFinderChanX.getMax() << std::endl;
   std::cout << "simchannelide y in: "<< _minMaxFinderChanY.getMin() << ", " << _minMaxFinderChanY.getMax() << std::endl;
   std::cout << "simchannelide z in: "<< _minMaxFinderChanZ.getMin() << ", " << _minMaxFinderChanZ.getMax() << std::endl;
+
+  std::cout << std::endl;
+  std::cout << "x trajectory begin in: "<< _minMaxFinderXb.getMin() << ", " << _minMaxFinderXb.getMax() << std::endl;
+  std::cout << "y trajectory begin in: "<< _minMaxFinderYb.getMin() << ", " << _minMaxFinderYb.getMax() << std::endl;
+  std::cout << "z trajectory begin in: "<< _minMaxFinderZb.getMin() << ", " << _minMaxFinderZb.getMax() << std::endl;
 }
 
 bool dune::MuonTaggerTreeMaker::hitsDetectorPlane(const simb::MCParticle& part, bool backDetector) // if false, front detector
