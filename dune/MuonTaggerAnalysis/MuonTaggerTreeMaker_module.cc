@@ -340,8 +340,8 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     if (abs(mcPart->PdgCode()) != 13)
         continue;
 
-    _hitsFrontDet = hitsDetectorPlane(*mcPart,false); // front
-    _hitsBackDet = hitsDetectorPlane(*mcPart,true); // back
+    //_hitsFrontDet = hitsDetectorPlane(*mcPart,false); // front
+    //_hitsBackDet = hitsDetectorPlane(*mcPart,true); // back
 
     _xb = mcPart->Position().X();
     _yb = mcPart->Position().Y();

@@ -58,13 +58,13 @@ c = root.TCanvas()
 
 def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel,ylabel,saveName,cuts="",drawopt="COL",logx=False,logy=False):
   if logx:
-    c.SetLogx()
+    canvas.SetLogx()
   else:
-    c.SetLogx(False)
+    canvas.SetLogx(False)
   if logy:
-    c.SetLogy()
+    canvas.SetLogy()
   else:
-    c.SetLogy(False)
+    canvas.SetLogy(False)
   binningString = "{0:d},{1:f},{2:f},{3:f},{4:f},{5:f}".format(nBinsX,xMin,xMax,nBinsY,yMin,yMax)
   name = "hist"+str(random.getrandbits(36))
   tree.Draw(variable+" >> "+name+"("+binningString+")",cuts,drawopt)
@@ -74,10 +74,12 @@ def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel
   canvas.SaveAs(saveName)
   return hist
 
-plotVariable2D(tree,c,"dEdx*1000.:E",50,0.,10.,100,0.,5.,"Muon Energy [GeV]","dE/dx [MeV/cm]","dEdxVE_notTPC.png",cuts="inTPC == 0")
-plotVariable2D(tree,c,"dEdx*1000.:p",50,0.,10.,100,0.,5.,"Muon Momentum [GeV/c]","dE/dx [MeV/cm]","dEdxVp_notTPC.png",cuts="inTPC == 0")
-plotVariable2D(tree,c,"dEdx*1000.:E",50,0.,10.,100,0.,5.,"Muon Energy [GeV]","dE/dx [MeV/cm]","dEdxVE_narrowTPC.png",cuts="inTPC && inWideTPC == 0")
-plotVariable2D(tree,c,"dEdx*1000.:p",50,0.,10.,100,0.,5.,"Muon Momentum [GeV/c]","dE/dx [MeV/cm]","dEdxVp_narrowTPC.png",cuts="inTPC && inWideTPC == 0")
-plotVariable2D(tree,c,"dEdx*1000.:E",50,0.,10.,100,1.,3.,"Muon Energy [GeV]","dE/dx [MeV/cm]","dEdxVE_wideTPC.png",cuts="inWideTPC")
-plotVariable2D(tree,c,"dEdx*1000.:p",50,0.,10.,100,1.,3.,"Muon Momentum [GeV/c]","dE/dx [MeV/cm]","dEdxVp_wideTPC.png",cuts="inWideTPC")
-plotVariable2D(tree,c,"E:p",100,0.,1.,100,0.,1.,"Muon Momentum [GeV/c]","Muon Energy [GeV]","EVp.png",cuts="")
+if __name__ == "__main__":
+
+  plotVariable2D(tree,c,"dEdx*1000.:E",50,0.,10.,100,0.,5.,"Muon Energy [GeV]","dE/dx [MeV/cm]","dEdxVE_notTPC.png",cuts="inTPC == 0")
+  plotVariable2D(tree,c,"dEdx*1000.:p",50,0.,10.,100,0.,5.,"Muon Momentum [GeV/c]","dE/dx [MeV/cm]","dEdxVp_notTPC.png",cuts="inTPC == 0")
+  plotVariable2D(tree,c,"dEdx*1000.:E",50,0.,10.,100,0.,5.,"Muon Energy [GeV]","dE/dx [MeV/cm]","dEdxVE_narrowTPC.png",cuts="inTPC && inWideTPC == 0")
+  plotVariable2D(tree,c,"dEdx*1000.:p",50,0.,10.,100,0.,5.,"Muon Momentum [GeV/c]","dE/dx [MeV/cm]","dEdxVp_narrowTPC.png",cuts="inTPC && inWideTPC == 0")
+  plotVariable2D(tree,c,"dEdx*1000.:E",50,0.,10.,100,1.,3.,"Muon Energy [GeV]","dE/dx [MeV/cm]","dEdxVE_wideTPC.png",cuts="inWideTPC")
+  plotVariable2D(tree,c,"dEdx*1000.:p",50,0.,10.,100,1.,3.,"Muon Momentum [GeV/c]","dE/dx [MeV/cm]","dEdxVp_wideTPC.png",cuts="inWideTPC")
+  plotVariable2D(tree,c,"E:p",100,0.,1.,100,0.,1.,"Muon Momentum [GeV/c]","Muon Energy [GeV]","EVp.png",cuts="")
