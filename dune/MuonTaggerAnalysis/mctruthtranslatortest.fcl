@@ -32,7 +32,7 @@ physics:
     mctruthanalyzertrans: 
     {
       module_type:  "MCTruthAnalyzer"
-      mcTruthTag:   "translator"
+      mcTruthTag:   "mctruthtranslator"
     }
   }
 
@@ -51,7 +51,20 @@ physics:
 
   trigger_paths: [transpath] 
 
-  end_paths: [ analysis ]
+  #stream1:  [ out1 ]
+
+  end_paths: [ analysis ] #, stream1]
 
 } # physics
+
+outputs:
+{
+ out1:
+ {
+   module_type: RootOutput
+   fileName:    "events_translated.root"
+   dataTier:    "gen"
+   compressionLevel: 1
+ }
+}
 
