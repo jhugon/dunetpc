@@ -1,0 +1,57 @@
+#include "services_dune.fcl"
+
+process_name: MCTruthTransTest
+
+services:
+{
+  TFileService:           { fileName: "mcTruthTransTest.root" }
+  #Timing:       {}
+  #SimpleMemoryCheck:     { ignoreTotal: 1 } # default is one
+  RandomNumberGenerator: {} #ART native random number generator
+  message:              @local::dune_message_services_prod_debug
+                        @table::protodune_simulation_services
+} # services
+
+source:
+{
+  module_type: RootInput
+  fileNames: ["/scratch/jhugon/AntiMuonCutEvents_LSU_protodune_1file_0_20160628T184031_gen_g4.root"]
+  #maxEvents:  10
+  maxEvents:  -1
+}
+
+physics:
+{
+  analyzers:
+  {
+    mctruthanalyzergen: 
+    {
+      module_type:  "MCTruthAnalyzer"
+      mcTruthTag:   "generator"
+    }
+    mctruthanalyzertrans: 
+    {
+      module_type:  "MCTruthAnalyzer"
+      mcTruthTag:   "translator"
+    }
+  }
+
+  analysis: [ mctruthanalyzergen, mctruthanalyzertrans ]
+
+  producers: {
+    mctruthtranslator:
+    {
+      module_type:  "MCTruthTranslator"
+      mcTruthTag:   "generator"
+    }
+
+  }
+
+  transpath : [mctruthtranslator]
+
+  trigger_paths: [transpath] 
+
+  end_paths: [ analysis ]
+
+} # physics
+
