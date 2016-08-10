@@ -122,6 +122,8 @@ private:
   float _backDetectorYmax;
   float _backDetectorZ;
 
+  bool _writeTrajectoryInfo;
+
   TTree* _outtree;
   TH1F* _trajectoryX;
   TH1F* _trajectoryY;
@@ -149,6 +151,7 @@ private:
   float _pEe;
 
   float _pb;
+  float _pe;
   float _thetab;
   float _costhetab;
   float _phib;
@@ -156,6 +159,9 @@ private:
   float _thetazenithb;
   float _costhetazenithb;
   float _phizenithb;
+
+  bool _inTPCe;
+  bool _inWideTPCe;
 
   int _numberTrajectoryPoints;
 
@@ -219,6 +225,9 @@ dune::MuonTaggerTreeMaker::MuonTaggerTreeMaker(fhicl::ParameterSet const & p)
   std::cout << "back detector X: " << _backDetectorXmin << " - " << _backDetectorXmax << std::endl;
   std::cout << "back detector Y: " << _backDetectorYmin << " - " << _backDetectorYmax << std::endl;
   std::cout << "back detector Z: " << _backDetectorZ << std::endl;
+
+  _writeTrajectoryInfo = p.get<bool>("writeTrajectoryInfo");
+  std::cout << "writeTrajectoryInfo: " << _writeTrajectoryInfo << std::endl;
 }
 
 void dune::MuonTaggerTreeMaker::beginJob()
@@ -245,6 +254,7 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _outtree->Branch("pEe",&_pEe,"pEe/F");
 
   _outtree->Branch("pb",&_pb,"pb/F");
+  _outtree->Branch("pe",&_pe,"pe/F");
   _outtree->Branch("thetab",&_thetab,"thetab/F");
   _outtree->Branch("costhetab",&_costhetab,"costhetab/F");
   _outtree->Branch("phib",&_phib,"phib/F");
@@ -253,17 +263,23 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _outtree->Branch("costhetazenithb",&_costhetazenithb,"costhetazenithb/F");
   _outtree->Branch("phizenithb",&_phizenithb,"phizenithb/F");
 
+  _outtree->Branch("inTPCe",&_inTPCe,"inTPCe/O");
+  _outtree->Branch("inWideTPCe",&_inWideTPCe,"inWideTPCe/O");
+
   _outtree->Branch("numberTrajectoryPoints",&_numberTrajectoryPoints,"numberTrajectoryPoints/I");
 
-  _outtree->Branch("trajx",&_trajx);
-  _outtree->Branch("trajy",&_trajy);
-  _outtree->Branch("trajz",&_trajz);
-  _outtree->Branch("trajt",&_trajt);
-  _outtree->Branch("trajp",&_trajp);
-  _outtree->Branch("trajE",&_trajE);
-  _outtree->Branch("trajdEdx",&_trajdEdx);
-  _outtree->Branch("trajInTPC",&_trajInTPC);
-  _outtree->Branch("trajInWideTPC",&_trajInWideTPC);
+  if (_writeTrajectoryInfo)
+  {
+    _outtree->Branch("trajx",&_trajx);
+    _outtree->Branch("trajy",&_trajy);
+    _outtree->Branch("trajz",&_trajz);
+    _outtree->Branch("trajt",&_trajt);
+    _outtree->Branch("trajp",&_trajp);
+    _outtree->Branch("trajE",&_trajE);
+    _outtree->Branch("trajdEdx",&_trajdEdx);
+    _outtree->Branch("trajInTPC",&_trajInTPC);
+    _outtree->Branch("trajInWideTPC",&_trajInWideTPC);
+  }
 
   _outtree->Branch("hitsFrontDet",&_hitsFrontDet,"hitsFrontDet/O");
   _outtree->Branch("hitsBackDet",&_hitsBackDet,"hitsBackDet/O");
@@ -318,6 +334,17 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 {
   // Implementation of required member function here.
 
+  // Zero out vectors for tree
+  _trajx.clear();
+  _trajy.clear();
+  _trajz.clear();
+  _trajt.clear();
+  _trajp.clear();
+  _trajE.clear();
+  _trajdEdx.clear();
+  _trajInTPC.clear();
+  _trajInWideTPC.clear();
+
   //Get needed data products
   auto mcPartHand = e.getValidHandle<std::vector<simb::MCParticle>>(_mcParticleTag);
   std::vector<art::Ptr<simb::MCParticle>> mcPartVec;
@@ -369,7 +396,8 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     _pze = mcPart->EndMomentum().Z();
     _pEe = mcPart->EndMomentum().T();
 
-    _pb = mcPart->Momentum().Vect().Mag();
+    _pb = mcPart->Momentum().P();
+    _pe = mcPart->EndMomentum().P();
     _thetab = mcPart->Momentum().Theta();
     _costhetab = mcPart->Momentum().CosTheta();
     _phib = mcPart->Momentum().Phi();
@@ -377,6 +405,9 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     _costhetazenithb = _pyb/_pb;
     _thetazenithb = TMath::ACos(_costhetazenithb);
     _phizenithb = TMath::ATan2(_pzb,-_pxb);
+
+    _inTPCe = inATPC(mcPart->EndPosition(),*geom,0.);
+    _inWideTPCe = inATPC(mcPart->EndPosition(),*geom,20.);
 
     _numberTrajectoryPoints = mcPart->NumberTrajectoryPoints();
 
@@ -396,30 +427,33 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
         _minMaxFinderTrajZ.addPoint(mcPart->Position(iPoint).Z());
         _minMaxFinderTrajT.addPoint(mcPart->Position(iPoint).T());
       }
-      _trajx.push_back(mcPart->Position(iPoint).X());
-      _trajy.push_back(mcPart->Position(iPoint).Y());
-      _trajz.push_back(mcPart->Position(iPoint).Z());
-      _trajt.push_back(mcPart->Position(iPoint).T());
-      _trajp.push_back(mcPart->Momentum(iPoint).P());
-      _trajE.push_back(mcPart->Momentum(iPoint).E());
-      _trajInTPC.push_back(isInATPC);
-      _trajInWideTPC.push_back(isInAWideTPC);
-      if (iPoint > 0)
+      if (_writeTrajectoryInfo)
       {
-        //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
-        //float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
+        _trajx.push_back(mcPart->Position(iPoint).X());
+        _trajy.push_back(mcPart->Position(iPoint).Y());
+        _trajz.push_back(mcPart->Position(iPoint).Z());
+        _trajt.push_back(mcPart->Position(iPoint).T());
+        _trajp.push_back(mcPart->Momentum(iPoint).P());
+        _trajE.push_back(mcPart->Momentum(iPoint).E());
+        _trajInTPC.push_back(isInATPC);
+        _trajInWideTPC.push_back(isInAWideTPC);
+        if (iPoint > 0)
+        {
+          //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
+          //float energyDiff = mcPart->Momentum(iPoint).E()-mcPart->Momentum().E();
 
-        float dE = mcPart->Momentum(iPoint).E() - mcPart->Momentum(iPoint-1).E();
-        float dx = (mcPart->Position(iPoint).Vect() - mcPart->Position(iPoint-1).Vect()).Mag();
-        float mdEodx = - dE/dx;
-        //std::cout << "     dE:    " << std::setw(12) <<dE <<" dx: " << std::setw(12)<<dx<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
-        _trajdEdx.push_back(mdEodx);
-      }
-      else
-      {
-        _trajdEdx.push_back(nanf(""));
-      }
-    }
+          float dE = mcPart->Momentum(iPoint).E() - mcPart->Momentum(iPoint-1).E();
+          float dx = (mcPart->Position(iPoint).Vect() - mcPart->Position(iPoint-1).Vect()).Mag();
+          float mdEodx = - dE/dx;
+          //std::cout << "     dE:    " << std::setw(12) <<dE <<" dx: " << std::setw(12)<<dx<<" -dE/dl " << std::setw(12)<<mdEodx<< std::endl;
+          _trajdEdx.push_back(mdEodx);
+        }
+        else
+        {
+          _trajdEdx.push_back(nanf(""));
+        }
+      } // if _writeTrajectoryInfo
+    } // for iPoint
   } // for mcPartVec
 
   for (const auto& simChan : simChanVec)

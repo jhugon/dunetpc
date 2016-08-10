@@ -43,6 +43,8 @@ physics:
       backDetectorYmin: 0
       backDetectorYmax: 608
       backDetectorZ: 696.2
+
+      writeTrajectoryInfo: false
     }
   }
 
