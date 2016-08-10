@@ -43,6 +43,10 @@ physics:
     {
       module_type:  "MCTruthTranslator"
       mcTruthTag:   "generator"
+      translateX:   500.
+      translateY:   -500.
+      translateZ:   500.
+      translateT:   100.
     }
 
   }

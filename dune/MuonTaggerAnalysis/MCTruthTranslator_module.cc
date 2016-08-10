@@ -46,9 +46,14 @@ public:
 
 private:
 
+  simb::MCParticle createTranslatedMCParticle(const simb::MCParticle& mcPart, float transX, float transY, float transZ, float transT) const;
+
   // Declare member data here.
   art::InputTag _mcTruthTag;
-
+  float _translateX;
+  float _translateY;
+  float _translateZ;
+  float _translateT;
 };
 
 
@@ -58,6 +63,15 @@ MCTruthTranslator::MCTruthTranslator(fhicl::ParameterSet const & p)
 {
   _mcTruthTag = p.get<art::InputTag>("mcTruthTag");
   std::cout << "_mcTruthTag: " << _mcTruthTag << std::endl;
+
+  _translateX = p.get<float>("translateX");
+  std::cout << "_translateX: " << _translateX << std::endl;
+  _translateY = p.get<float>("translateY");
+  std::cout << "_translateY: " << _translateY << std::endl;
+  _translateZ = p.get<float>("translateZ");
+  std::cout << "_translateZ: " << _translateZ << std::endl;
+  _translateT = p.get<float>("translateT");
+  std::cout << "_translateT: " << _translateT << std::endl;
 
   // Call appropriate produces<>() functions here.
   produces< std::vector< simb::MCTruth> >();
@@ -85,7 +99,7 @@ void MCTruthTranslator::produce(art::Event & e)
     for (size_t iPart = 0; iPart < nParticles; iPart++)
     {
       const simb::MCParticle & mcPart = mcTruth->GetParticle(iPart);
-      simb::MCParticle newMCPart(mcPart);
+      simb::MCParticle newMCPart = createTranslatedMCParticle(mcPart,_translateX,_translateY,_translateZ,_translateT);
       newMCTruth.Add(newMCPart);
     } // for iPart
     if(mcTruth->NeutrinoSet())
@@ -109,6 +123,28 @@ void MCTruthTranslator::produce(art::Event & e)
   } // for mcTruth
 
   e.put(std::move(newTruthVecPtr));
+}
+
+simb::MCParticle MCTruthTranslator::createTranslatedMCParticle(const simb::MCParticle& mcPart, float transX, float transY, float transZ, float transT) const
+{
+  simb::MCParticle result(mcPart.TrackId(),mcPart.PdgCode(),mcPart.Process(),mcPart.Mother(),mcPart.Mass(),mcPart.StatusCode());
+  result.SetPolarization(mcPart.Polarization());
+  result.SetEndProcess(mcPart.EndProcess());
+  for(int i=0; i < mcPart.NumberDaughters(); i++)
+  {
+    result.AddDaughter(mcPart.Daughter(i));
+  }
+  result.SetRescatter(mcPart.Rescatter());
+  result.SetWeight(mcPart.Weight());
+  result.SetGvtx(mcPart.Gvx(),mcPart.Gvy(),mcPart.Gvz(),mcPart.Gvt());
+  for(unsigned i=0; i < mcPart.NumberTrajectoryPoints(); i++)
+  {
+    const TLorentzVector& pos = mcPart.Position(i);
+    TLorentzVector newPos(pos.X()+_translateX,pos.Y()+_translateY,pos.Z()+_translateZ,pos.T()+_translateT);
+    result.AddTrajectoryPoint(newPos,mcPart.Momentum(i));
+  }
+
+  return result;
 }
 
 DEFINE_ART_MODULE(MCTruthTranslator)
