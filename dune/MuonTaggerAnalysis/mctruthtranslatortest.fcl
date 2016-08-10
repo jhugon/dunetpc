@@ -15,7 +15,8 @@ services:
 source:
 {
   module_type: RootInput
-  fileNames: ["/scratch/jhugon/AntiMuonCutEvents_LSU_protodune_1file_0_20160628T184031_gen_g4.root"]
+  fileNames: [
+            ]
   #maxEvents:  10
   maxEvents:  -1
 }
