@@ -128,6 +128,9 @@ private:
   TH1F* _trajectoryX;
   TH1F* _trajectoryY;
   TH1F* _trajectoryZ;
+  TH2F* _trajectoryXY;
+  TH2F* _trajectoryZY;
+  TH2F* _trajectoryXZ;
 
   // tree data members
   //
@@ -289,6 +292,9 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _trajectoryX = tfs->make<TH1F>("trajectoryX","",2000,-5000,5000);
   _trajectoryY = tfs->make<TH1F>("trajectoryY","",2000,-5000,1000);
   _trajectoryZ = tfs->make<TH1F>("trajectoryZ","",2000,-5000,5000);
+  _trajectoryXY = tfs->make<TH2F>("trajectoryXY","",200,-500,750,200,-1000,1000);
+  _trajectoryZY = tfs->make<TH2F>("trajectoryZY","",200,-1000,1000,200,-1000,1000);
+  _trajectoryXZ = tfs->make<TH2F>("trajectoryXZ","",200,-500,750,200,-1000,1000);
 
   ////// Experiment w/ Geometry
 
@@ -413,13 +419,18 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
     for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
     {
+      _trajectoryX->Fill(mcPart->Position(iPoint).X());
+      _trajectoryY->Fill(mcPart->Position(iPoint).Y());
+      _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
+
+      _trajectoryXY->Fill(mcPart->Position(iPoint).X(),mcPart->Position(iPoint).Y());
+      _trajectoryZY->Fill(mcPart->Position(iPoint).Z(),mcPart->Position(iPoint).Y());
+      _trajectoryXZ->Fill(mcPart->Position(iPoint).X(),mcPart->Position(iPoint).Z());
+
       bool isInATPC = inATPC(mcPart->Position(iPoint),*geom,0.);
       bool isInAWideTPC = inATPC(mcPart->Position(iPoint),*geom,20.);
       if (isInAWideTPC)
       {
-        _trajectoryX->Fill(mcPart->Position(iPoint).X());
-        _trajectoryY->Fill(mcPart->Position(iPoint).Y());
-        _trajectoryZ->Fill(mcPart->Position(iPoint).Z());
         //std::cout << "   X,Y,Z:    " << std::setw(12) <<mcPart->Position(iPoint).X() <<", " << std::setw(12)<<mcPart->Position(iPoint).Y()<<", " << std::setw(12)<<mcPart->Position(iPoint).Z()<<", "<< std::endl;
         auto vec3 = mcPart->Position(iPoint).Vect();
         _minMaxFinderTrajX.addPoint(mcPart->Position(iPoint).X());
