@@ -54,10 +54,7 @@ import ROOT as root
 from helpers import *
 root.gROOT.SetBatch(True)
 
-def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,cuts="",drawopt="",logx=False,logy=False):
-  """
-  in variable, first part is y axis, second is x axis
-  """
+def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,cuts="",drawopt="",logx=False,logy=False,caption="",captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString=""):
   if logx:
     canvas.SetLogx()
   else:
@@ -72,13 +69,15 @@ def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,
   hist = root.gPad.GetPrimitive(name)
   hist.SetTitle("")
   setHistTitles(hist,xlabel,ylabel)
+  drawStandardCaptions(canvas,caption,captionleft1,captionleft2,captionleft3,captionright1,captionright2,captionright3,preliminaryString)
   canvas.SaveAs(saveName)
   return hist
 
-def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel,ylabel,saveName,cuts="",drawopt="COL",logx=False,logy=False):
+def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel,ylabel,saveName,cuts="",drawopt="COLZ",logx=False,logy=False,caption="",captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString=""):
   """
   in variable, first part is y axis, second is x axis
   """
+  setupCOLZFrame(canvas)
   if logx:
     canvas.SetLogx()
   else:
@@ -93,7 +92,9 @@ def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel
   hist = root.gPad.GetPrimitive(name)
   hist.SetTitle("")
   setHistTitles(hist,xlabel,ylabel)
+  drawStandardCaptions(canvas,caption,captionleft1,captionleft2,captionleft3,captionright1,captionright2,captionright3,preliminaryString)
   canvas.SaveAs(saveName)
+  setupCOLZFrame(canvas,reset=True)
   return hist
 
 
@@ -111,9 +112,9 @@ if __name__ == "__main__":
   #    print tree.xe, tree.ye, tree.ze, tree.pe
   #tree.Scan("numberTrajectoryPoints")
 
-  plotVariable1D(tree,c,"xb",400,-4000,4000,"Muon Starting x [cm]","Events/bin","Start_x.png",cuts="")
+  plotVariable1D(tree,c,"xb",100,-1000,1000,"Muon Starting x [cm]","Events/bin","Start_x.png",cuts="")
   plotVariable1D(tree,c,"yb",500,0,1000,"Muon Starting y [cm]","Events/bin","Start_y.png",cuts="")
-  plotVariable1D(tree,c,"zb",400,-4000,4000,"Muon Starting z [cm]","Events/bin","Start_z.png",cuts="")
+  plotVariable1D(tree,c,"zb",100,-2000,2000,"Muon Starting z [cm]","Events/bin","Start_z.png",cuts="")
   #plotVariable2D(tree,c,"yb:xb",40,-400,400,40,0,800,"Muon Starting x [cm]","Muon Starting y [cm]","Start_yVx.png",cuts="")
   #plotVariable2D(tree,c,"zb:yb",40,0,800,35,-10,690,"Muon Starting y [cm]","Muon Starting z [cm]","Start_zVy.png",cuts="")
   plotVariable2D(tree,c,"zb:xb",40,-400,400,35,-10,690,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx.png",cuts="")
@@ -122,4 +123,8 @@ if __name__ == "__main__":
   plotVariable2D(tree,c,"ze:ye",40,0,800,35,-10,690,"Stopping Muon y [cm]","Stopping Muon z [cm]","Stop_zVy.png",cuts="inWideTPCe && pe<0.01")
   plotVariable2D(tree,c,"ze:xe",40,-400,400,35,-10,690,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx.png",cuts="inWideTPCe && pe<0.01")
 
-  #tree.Scan("xb:yb:zb")
+  plotVariable2D(tree,c,"ze:xe",40,-400,400,35,-10,690,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx_cuts.png",cuts="inWideTPCe && pe<0.01 && xb < 200 & xb > 0 && zb < 200 && zb > 0",caption="Muon Starting 0<x<200 cm and 0<z<200cm")
+
+  plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",40,-400,400,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
+
+  tree.Scan("xb:yb:zb:180-thetazenithb*180/pi")

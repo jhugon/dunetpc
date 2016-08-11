@@ -14,6 +14,7 @@ import os
 import sys
 import time
 import datetime
+import random
 #import matplotlib.pyplot as mpl
 
 def getOrdinalStr(inInt):
@@ -205,13 +206,14 @@ def setStyle():
   gStyle.SetTitleSize(0.045,"Y")
  
   gStyle.SetTitleOffset(1.4,"X")
-  gStyle.SetTitleOffset(1.4,"Y")
+  gStyle.SetTitleOffset(1.6,"Y")
  
   gStyle.SetTextSize(0.055)
   gStyle.SetTextFont(42)
  
   gStyle.SetOptStat(0)
   setNormalColorTable()
+  #gStyle.SetPalette(53)
   
 setStyle()
 
@@ -1336,7 +1338,7 @@ def getEfficiencyInterval(passed,total):
   high = eff.ClopperPearson(int(total),int(passed),quant,True)
   return [low,nom,high]
 
-def drawStandardCaptions(canvas,caption1,caption2="",caption3="",caption4="",caption5="",preliminaryString=""):
+def drawStandardCaptions(canvas,caption,captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString=""):
   tlatex = root.TLatex()
   tlatex.SetNDC()
 
@@ -1346,13 +1348,15 @@ def drawStandardCaptions(canvas,caption1,caption2="",caption3="",caption4="",cap
   tlatex.DrawLatex(gStyle.GetPadLeftMargin(),0.96,preliminaryString)
 
   tlatex.SetTextAlign(32)
-  tlatex.DrawLatex(1.0-gStyle.GetPadRightMargin(),0.96,caption1)
+  tlatex.DrawLatex(1.0-canvas.GetRightMargin(),0.96,caption)
   tlatex.SetTextAlign(12)
-  tlatex.DrawLatex(0.02+gStyle.GetPadLeftMargin(),0.88,caption2)
-  tlatex.DrawLatex(0.02+gStyle.GetPadLeftMargin(),0.82,caption3)
-  tlatex.DrawLatex(0.02+gStyle.GetPadLeftMargin(),0.76,caption4)
+  tlatex.DrawLatex(0.02+canvas.GetLeftMargin(),0.88,captionleft1)
+  tlatex.DrawLatex(0.02+canvas.GetLeftMargin(),0.82,captionleft2)
+  tlatex.DrawLatex(0.02+canvas.GetLeftMargin(),0.76,captionleft3)
   tlatex.SetTextAlign(32)
-  tlatex.DrawLatex(0.97-gStyle.GetPadRightMargin(),0.88,caption5)
+  tlatex.DrawLatex(0.97-canvas.GetRightMargin(),0.88,captionright1)
+  tlatex.DrawLatex(0.97-canvas.GetRightMargin(),0.82,captionright2)
+  tlatex.DrawLatex(0.97-canvas.GetRightMargin(),0.76,captionright3)
   return tlatex
 
 def copyTreeBranchToNewNameTree(tree,oldBranchName,newBranchName):
@@ -1382,7 +1386,50 @@ def getHistMax(hist):
   iBin = hist.GetMaximumBin()
   result = hist.GetBinContent(iBin)
   return result
-  
+
+def makeStdAxisHist(histList,logy=False,freeTopSpace=0.5):
+  assert(len(histList)>0)
+  multiplier = 1./(1.-freeTopSpace)
+  yMin = 0.
+  yMax = 0.
+  xMin = 1e15
+  xMax = -1e15
+  for hist in histList:
+    histMax = getHistMax(hist)
+    yMax = max(yMax,histMax)
+    nBins = hist.GetNbinsX()
+    xMax = max(xMax,hist.GetXaxis().GetBinUpEdge(nBins))
+    xMin = min(xMin,hist.GetBinLowEdge(1))
+  if logy:
+    yMin = 10**(-1)
+    yMax = (math.log10(yMax) + 1.)*multiplier - 1.
+    yMax = 10**yMax
+  else:
+    yMax = yMax*multiplier
+  axisHist = root.TH2F("axisHist"+str(random.randint(1000,1000000)),"",1,xMin,xMax,1,yMin,yMax)
+  return axisHist
+
+def getLogBins(nBins,xMin,xMax):
+  xMinLog = math.log10(xMin)
+  delta = (math.log10(xMax)-xMinLog)/nBins
+  return [10**(xMinLog + x*delta) for x in range(nBins+1)]
+
+def drawNormalLegend(hists,labels,option="l"):
+  assert(len(hists)==len(labels))
+  #leg = root.TLegend(0.55,0.6,0.91,0.89)
+  #leg = root.TLegend(0.35,0.6,0.91,0.89)
+  leg = root.TLegend(0.40,0.7,0.91,0.89)
+  leg.SetLineColor(root.kWhite)
+  for hist,label in zip(hists,labels):
+    leg.AddEntry(hist,label,option)
+  return leg
+
+def setupCOLZFrame(pad,reset=False):
+   if reset:
+     pad.SetRightMargin(gStyle.GetPadRightMargin())
+   else:
+     pad.SetRightMargin(0.15)
+
 if __name__ == "__main__":
 
   root.gROOT.SetBatch(True)
