@@ -54,7 +54,7 @@ import ROOT as root
 from helpers import *
 root.gROOT.SetBatch(True)
 
-def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,cuts="",drawopt="",logx=False,logy=False,caption="",captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString=""):
+def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,cuts="",drawopt="",logx=False,logy=False,caption="",captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString="",scaleFactor=1.):
   if logx:
     canvas.SetLogx()
   else:
@@ -67,11 +67,9 @@ def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,
   name = "hist"+str(random.getrandbits(36))
   tree.Draw(variable+" >> "+name+"("+binningString+")",cuts,drawopt)
   hist = root.gPad.GetPrimitive(name)
+  hist.Scale(scaleFactor)
   hist.UseCurrentStyle()
   hist.SetTitle("")
-  #hist.Scale(1./200000)
-  #print(hist.Integral())
-  #ylabel = "Fraction of Sample"
   setHistTitles(hist,xlabel,ylabel)
   drawStandardCaptions(canvas,caption,captionleft1,captionleft2,captionleft3,captionright1,captionright2,captionright3,preliminaryString)
   canvas.SaveAs(saveName)
@@ -143,9 +141,14 @@ if __name__ == "__main__":
 
   plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",40,-400,400,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
 
-  plotVariable1D(tree,c,"ye",12,0,600,"Muon Stopping y [cm]","Events/bin","Stop_y.png",cuts="inWideTPCe && pe<0.01 && xe > 0 && xe < 200 && ze > 0 && ze < 150")
+  stop_y_hist = plotVariable1D(tree,c,"ye",6,0,600,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.)
+  print "stop_y_hist integral: {0}".format(stop_y_hist.Integral())
+  stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_ally.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.)
+  print "stop_ally_hist integral: {0}".format(stop_ally_hist.Integral())
+  plotVariable1D(tree,c,"ye",10,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mosty.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.)
+  plotVariable1D(tree,c,"ye",100,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mostyfine.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.*10)
 
-
+  plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125")
 
   #tree.Scan("xb:yb:zb:180-thetazenithb*180/pi")
 
