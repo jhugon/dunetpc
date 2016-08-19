@@ -114,6 +114,7 @@ if __name__ == "__main__":
   
   tree = f.Get("muontaggertreemaker/tree")
   nEvents = tree.GetEntries()
+  print "tree nEntries: ", nEvents
   scaleFactor = 1./nEvents*8.*166.
   #tree.Print()
   

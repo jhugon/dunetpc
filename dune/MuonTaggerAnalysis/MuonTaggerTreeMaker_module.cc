@@ -123,6 +123,7 @@ private:
   float _backDetectorZ;
 
   bool _writeTrajectoryInfo;
+  bool _writeIDEInfo;
 
   TTree* _outtree;
   TH1F* _trajectoryX;
@@ -178,6 +179,11 @@ private:
   std::vector<bool> _trajInTPC;
   std::vector<bool> _trajInWideTPC;
 
+  int _numberIDEs;
+  std::vector<float> _idex;
+  std::vector<float> _idey;
+  std::vector<float> _idez;
+
   bool _hitsFrontDet;
   bool _hitsBackDet;
 
@@ -185,10 +191,6 @@ private:
   MinMaxFinder _minMaxFinderTrajY;
   MinMaxFinder _minMaxFinderTrajZ;
   MinMaxFinder _minMaxFinderTrajT;
-
-  MinMaxFinder _minMaxFinderChanX;
-  MinMaxFinder _minMaxFinderChanY;
-  MinMaxFinder _minMaxFinderChanZ;
 
   MinMaxFinder _minMaxFinderXb; // b means begin
   MinMaxFinder _minMaxFinderYb;
@@ -231,6 +233,8 @@ dune::MuonTaggerTreeMaker::MuonTaggerTreeMaker(fhicl::ParameterSet const & p)
 
   _writeTrajectoryInfo = p.get<bool>("writeTrajectoryInfo");
   std::cout << "writeTrajectoryInfo: " << _writeTrajectoryInfo << std::endl;
+  _writeIDEInfo = p.get<bool>("writeIDEInfo");
+  std::cout << "writeIDEInfo: " << _writeIDEInfo << std::endl;
 }
 
 void dune::MuonTaggerTreeMaker::beginJob()
@@ -282,6 +286,13 @@ void dune::MuonTaggerTreeMaker::beginJob()
     _outtree->Branch("trajdEdx",&_trajdEdx);
     _outtree->Branch("trajInTPC",&_trajInTPC);
     _outtree->Branch("trajInWideTPC",&_trajInWideTPC);
+  }
+  if (_writeIDEInfo)
+  {
+    _outtree->Branch("numberIDEs",&_numberIDEs,"numberIDEs/I");
+    _outtree->Branch("idex",&_idex);
+    _outtree->Branch("idey",&_idey);
+    _outtree->Branch("idez",&_idez);
   }
 
   _outtree->Branch("hitsFrontDet",&_hitsFrontDet,"hitsFrontDet/O");
@@ -350,6 +361,9 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
   _trajdEdx.clear();
   _trajInTPC.clear();
   _trajInWideTPC.clear();
+  _idex.clear();
+  _idey.clear();
+  _idez.clear();
 
   //Get needed data products
   auto mcPartHand = e.getValidHandle<std::vector<simb::MCParticle>>(_mcParticleTag);
@@ -465,27 +479,55 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
         }
       } // if _writeTrajectoryInfo
     } // for iPoint
+
+    if (_writeIDEInfo)
+    {
+      // Look at IDE points
+      int trackid = mcPart->TrackId();
+      _numberIDEs = 0;
+      for (const auto& simChan : simChanVec)
+      {
+        const std::map< unsigned short, std::vector< sim::IDE > > & tdcidemap = simChan->TDCIDEMap();
+        for(auto& tdcidepair : tdcidemap)
+        {
+          //auto tdc = tdcidepair.first;
+          auto ides = tdcidepair.second;
+          //std::cout << "tdc: " << tdc << ", ide: " << std::endl;
+          for (const auto& ide : ides)
+          {
+            if (ide.trackID == trackid)
+            {
+              _numberIDEs++;
+              _idex.push_back(ide.x);
+              _idey.push_back(ide.y);
+              _idez.push_back(ide.z);
+              //std::cout << "  x,y,z" << ide.x <<", " << ide.y << ", "<< ide.z << std::endl;
+            }
+          }
+        }
+        //simChan->Dump(std::cout);
+        //std::cout << std::endl;
+      } // for simChanVec
+    } // if _writeIDEInfo
+
   } // for mcPartVec
 
-  for (const auto& simChan : simChanVec)
-  {
-    const std::map< unsigned short, std::vector< sim::IDE > > & tdcidemap = simChan->TDCIDEMap();
-    for(auto& tdcidepair : tdcidemap)
-    {
-      //auto tdc = tdcidepair.first;
-      auto ides = tdcidepair.second;
-      //std::cout << "tdc: " << tdc << ", ide: " << std::endl;
-      for (const auto& ide : ides)
-      {
-        //std::cout << "  x,y,z" << ide.x <<", " << ide.y << ", "<< ide.z << std::endl;
-        _minMaxFinderChanX.addPoint(ide.x);
-        _minMaxFinderChanY.addPoint(ide.x);
-        _minMaxFinderChanZ.addPoint(ide.x);
-      }
-    }
-    //simChan->Dump(std::cout);
-    //std::cout << std::endl;
-  } // for simChanVec
+  //for (const auto& simChan : simChanVec)
+  //{
+  //  const std::map< unsigned short, std::vector< sim::IDE > > & tdcidemap = simChan->TDCIDEMap();
+  //  for(auto& tdcidepair : tdcidemap)
+  //  {
+  //    //auto tdc = tdcidepair.first;
+  //    auto ides = tdcidepair.second;
+  //    //std::cout << "tdc: " << tdc << ", ide: " << std::endl;
+  //    for (const auto& ide : ides)
+  //    {
+  //      //std::cout << "  x,y,z" << ide.x <<", " << ide.y << ", "<< ide.z << std::endl;
+  //    }
+  //  }
+  //  //simChan->Dump(std::cout);
+  //  //std::cout << std::endl;
+  //} // for simChanVec
 
   //for (const auto& auxDetSimChan : auxDetSimChanVec)
   //{
@@ -509,11 +551,6 @@ void dune::MuonTaggerTreeMaker::endJob()
   std::cout << "trajectory y in: "<< _minMaxFinderTrajY.getMin() << ", " << _minMaxFinderTrajY.getMax() << std::endl;
   std::cout << "trajectory z in: "<< _minMaxFinderTrajZ.getMin() << ", " << _minMaxFinderTrajZ.getMax() << std::endl;
   std::cout << "trajectory t in: "<< _minMaxFinderTrajT.getMin() << ", " << _minMaxFinderTrajT.getMax() << std::endl;
-
-  std::cout << std::endl;
-  std::cout << "simchannelide x in: "<< _minMaxFinderChanX.getMin() << ", " << _minMaxFinderChanX.getMax() << std::endl;
-  std::cout << "simchannelide y in: "<< _minMaxFinderChanY.getMin() << ", " << _minMaxFinderChanY.getMax() << std::endl;
-  std::cout << "simchannelide z in: "<< _minMaxFinderChanZ.getMin() << ", " << _minMaxFinderChanZ.getMax() << std::endl;
 
   std::cout << std::endl;
   std::cout << "x trajectory begin in: "<< _minMaxFinderXb.getMin() << ", " << _minMaxFinderXb.getMax() << std::endl;
