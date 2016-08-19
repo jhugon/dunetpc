@@ -113,6 +113,8 @@ if __name__ == "__main__":
   f = root.TFile("MuonTaggerTree.root")
   
   tree = f.Get("muontaggertreemaker/tree")
+  nEvents = tree.GetEntries()
+  scaleFactor = 1./nEvents*8.*166.
   #tree.Print()
   
   #for iEvent in range(tree.GetEntries()):
@@ -141,12 +143,12 @@ if __name__ == "__main__":
 
   plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",40,-400,400,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
 
-  stop_y_hist = plotVariable1D(tree,c,"ye",6,0,600,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.)
+  stop_y_hist = plotVariable1D(tree,c,"ye",6,0,600,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
   print "stop_y_hist integral: {0}".format(stop_y_hist.Integral())
-  stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_ally.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.)
+  stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_ally.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
   print "stop_ally_hist integral: {0}".format(stop_ally_hist.Integral())
-  plotVariable1D(tree,c,"ye",10,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mosty.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.)
-  plotVariable1D(tree,c,"ye",100,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mostyfine.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=1./2e5*8.*166.*10)
+  plotVariable1D(tree,c,"ye",10,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mosty.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
+  plotVariable1D(tree,c,"ye",100,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mostyfine.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
 
   plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125")
 
