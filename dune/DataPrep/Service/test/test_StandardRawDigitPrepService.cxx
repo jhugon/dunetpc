@@ -11,7 +11,7 @@
 #include <fstream>
 #include <iomanip>
 #include "art/Framework/Services/Registry/ServiceHandle.h"
-#include "lardata/RawData/RawDigit.h"
+#include "lardataobj/RawData/RawDigit.h"
 #include "dune/ArtSupport/ArtServiceHelper.h"
 #include "dune/DuneInterface/AdcTypes.h"
 #include "dune/DuneInterface/RawDigitPrepService.h"
@@ -36,14 +36,19 @@ using raw::RawDigit;
 
 bool sigequal(AdcSignal sig1, AdcSignal sig2) {
   AdcSignal sigdiff = sig2 - sig1;
-  if ( sigdiff < -0.5 ) return false;
-  if ( sigdiff >  0.5 ) return false;
+  if ( sigdiff < -0.5 || sigdiff >  0.5 ) {
+    cout << "sigequal: " << sig1 << " != " << sig2 << endl;
+    return false;
+  }
   return true;
 }
 
 //**********************************************************************
 
-int test_StandardRawDigitPrepService() {
+// If usePedestalAdjustment is true, then extra pedestals are added and
+// then removed using the DoPedestalAdjustment option.
+
+int test_StandardRawDigitPrepService(bool useExistingFcl =false, bool useFclFile =false) {
   const string myname = "test_StandardRawDigitPrepService: ";
 #ifdef NDEBUG
   cout << myname << "NDEBUG must be off." << endl;
@@ -54,34 +59,55 @@ int test_StandardRawDigitPrepService() {
   cout << myname << line << endl;
   cout << myname << "Create top-level FCL." << endl;
   string fclfile = "test_StandardRawDigitPrepService.fcl";
-  ofstream fout(fclfile.c_str());
-  int loglevel = 1;
-  fout << "services.RawDigitExtractService: {" << endl;
-  fout << "  service_provider: StandardRawDigitExtractService" << endl;
-  fout << "  LogLevel: " << loglevel << endl;
-  fout << "  PedestalOption: 1" << endl;
-  fout << "  FlagStuckOff: true" << endl;
-  fout << "  FlagStuckOn: true" << endl;
-  fout << "}" << endl;
-  fout << "services.RawDigitPrepService: {" << endl;
-  fout << "  service_provider: StandardRawDigitPrepService" << endl;
-  fout << "  LogLevel: " << loglevel << endl;
-  fout << "  DoMitigation:     false" << endl;
-  fout << "}" << endl;
-  fout.close();
+  bool usePedestalAdjustment = false;
+  if ( useExistingFcl ) {
+  } else if ( useFclFile ) {
+    ofstream fout(fclfile.c_str());
+    fout << "#include \"services_dune.fcl\"" << endl;
+    fout << "services: @local::dune35tdata_reco_services" << endl;
+    fout << "services.RawDigitPrepService.DoMitigation: false" << endl;
+    fout << "services.RawDigitPrepService.DoNoiseRemoval: false" << endl;
+    fout << "services.RawDigitPrepService.DoDeconvolution: false" << endl;
+    fout.close();
+  } else {
+    ofstream fout(fclfile.c_str());
+    fout << "services.RawDigitExtractService: {" << endl;
+    fout << "  service_provider: StandardRawDigitExtractService" << endl;
+    fout << "  LogLevel:        1" << endl;
+    fout << "  PedestalOption:  1" << endl;
+    fout << "  FlagStuckOff: true" << endl;
+    fout << "  FlagStuckOn:  true" << endl;
+    fout << "}" << endl;
+    fout << "services.PedestalEvaluationService: {" << endl;
+    fout << "  service_provider: MedianPedestalService" << endl;
+    fout << "  LogLevel:           1" << endl;
+    fout << "  SkipFlaggedSamples: true" << endl;
+    fout << "  SkipSignals:        true" << endl;
+    fout << "}" << endl;
+    fout << "services.RawDigitPrepService: {" << endl;
+    fout << "  service_provider: StandardRawDigitPrepService" << endl;
+    fout << "  LogLevel:                 1" << endl;
+    fout << "  SkipBad:              false" << endl;
+    fout << "  SkipNoisy:            false" << endl;
+    fout << "  DoMitigation:         false" << endl;
+    fout << "  DoEarlySignalFinding: false" << endl;
+    fout << "  DoNoiseRemoval:       false" << endl;
+    fout << "  DoDeconvolution:      false" << endl;
+    fout << "  DoROI:                false" << endl;
+    fout << "  DoWires:              false" << endl;
+    fout << "  DoPedestalAdjustment:  true" << endl;
+    fout << "}" << endl;
+    fout.close();
+    usePedestalAdjustment = true;
+  }
 
   cout << myname << "Fetch art service helper." << endl;
   ArtServiceHelper& ash = ArtServiceHelper::instance();
   ash.print();
 
   cout << myname << line << endl;
-  cout << myname << "Add raw digit extract service." << endl;
-  assert( ash.addService("RawDigitExtractService", fclfile, true) == 0 );
-  ash.print();
-
-  cout << myname << line << endl;
-  cout << myname << "Add raw digit prep service." << endl;
-  assert( ash.addService("RawDigitPrepService", fclfile, true) == 0 );
+  cout << myname << "Add services." << endl;
+  assert( ash.addServices(fclfile, true) == 0 );
   ash.print();
 
   cout << myname << line << endl;
@@ -101,6 +127,13 @@ int test_StandardRawDigitPrepService() {
   unsigned int isig_stucklo = 15;
   unsigned int isig_stuckhi = 25;
   AdcSignal peds[nchan] = {2000.2, 2010.1, 2020.3, 1990.4, 1979.6, 1979.2, 1995.0, 2001.3};
+  AdcSignal xpeds[nchan] = {0, 0, 0, 0, 0, 0, 0, 0};  // Need pedestal adju
+  if ( usePedestalAdjustment ) {
+    xpeds[4] = 100.0;
+    xpeds[5] = 100.0;
+    xpeds[6] = 100.0;
+    xpeds[7] = 100.0;
+  }
   vector<RawDigit> digs;
   map<AdcChannel, AdcCountVector> adcsmap;
   map<AdcChannel, AdcFlagVector> expflagsmap;
@@ -116,8 +149,8 @@ int test_StandardRawDigitPrepService() {
     assert(sigsin[chan].size() == nsig);
     AdcCountVector adcsin;
     for ( unsigned int isig=0; isig<nsig; ++isig) {
-      AdcSignal sig = sigsin[chan][isig] + peds[chan];
-      AdcCount adc = 0.0;
+      AdcSignal sig = sigsin[chan][isig] + peds[chan] + xpeds[chan];
+      AdcCount adc = 0;
       if ( sig > 0.0 ) adc = int(sig+0.5);
       if ( adc > 4095 ) adc = 4095;
       AdcCount adchigh = adc & highbits;
@@ -170,17 +203,22 @@ int test_StandardRawDigitPrepService() {
   cout << myname << "Found number of channels: " << prepdigs.size() << endl;
   for ( AdcChannelDataMap::const_iterator ichdat=prepdigs.begin(); ichdat!=prepdigs.end(); ++ichdat ) {
     AdcChannel chan = ichdat->first;
-    const AdcSignalVector& sigs = ichdat->second.samples;
-    const AdcFlagVector& flags = ichdat->second.flags;
-    const raw::RawDigit* pdig = ichdat->second.digit;
+    const AdcChannelData& acd = ichdat->second;
+    const AdcSignalVector& sigs = acd.samples;
+    const AdcFlagVector& flags = acd.flags;
+    const raw::RawDigit* pdig = acd.digit;
+    AdcSignal ped = acd.pedestal;
     cout << myname << "----- Channel " << chan << endl;
     cout << myname << "Output vector size: " << sigs.size() << endl;
     cout << myname << " Output flags size: " << flags.size() << endl;
+    cout << myname << "          Pedestal: " << ped << endl;
+    cout << myname << "        samples[0]: " << sigs[0] << endl;
     assert( sigs.size() == nsig );
     assert( flags.size() == nsig );
     assert( pdig != nullptr );
     assert( pdig == &digs[chan] );
     assert( pdig->Channel() == chan );
+    assert( ichdat->second.digitIndex == chan );
     const AdcFlagVector& expflags = expflagsmap[chan];
     assert( expflagsmap[chan].size() == nsig );
     for ( unsigned int isig=0; isig<nsig; ++isig ) {
@@ -188,22 +226,37 @@ int test_StandardRawDigitPrepService() {
            << setw(2) << isig << ": " << setw(4) << adcsmap[chan][isig]
            << fixed << setprecision(1) << setw(8) << sigs[isig]
            << " [" << flags[isig] << "]" << endl;
+      assert( adcsmap[chan][isig] == acd.raw[isig] );
       if ( flags[isig] == AdcGood ) assert( sigequal(sigs[isig], sigsin[chan][isig]) );
-      assert( flags[isig] == expflags[isig] );
+      assert( sigequal(flags[isig], expflags[isig]) );
     }
   }
+
+  cout << myname << line << endl;
+  cout << "Done." << endl;
   return 0;
 }
 
 //**********************************************************************
 
 int main(int argc, char* argv[]) {
-  int logLevel = 1;
+  bool useExistingFcl = false;
+  bool useFclFile = true;   // If true ware are also test 35t dune reco fcl
   if ( argc > 1 ) {
-    istringstream ssarg(argv[1]);
-    ssarg >> logLevel;
+    string sarg(argv[1]);
+    if ( sarg == "-h" ) {
+      cout << "Usage: " << argv[0] << " [UseExisting] [UseFclFile]" << endl;
+      cout << "  If UseExisting = true, existing FCL file is used." << endl;
+      cout << "  If UseFclFile = true, FCL file dataprep_dune." << endl;
+      return 0;
+    }
+    useExistingFcl = sarg == "true" || sarg == "1";
   }
-  return test_StandardRawDigitPrepService();
+  if ( argc > 2 ) {
+    string sarg(argv[2]);
+    useFclFile = sarg == "true" || sarg == "1";
+  }
+  return test_StandardRawDigitPrepService(useExistingFcl, useFclFile);
 }
 
 //**********************************************************************

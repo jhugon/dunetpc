@@ -9,6 +9,9 @@
 #define AdcTypes_H
 
 #include <vector>
+#include <utility>
+
+typedef unsigned int AdcIndex;
 
 typedef short AdcCount;
 typedef std::vector<AdcCount> AdcCountVector;
@@ -34,5 +37,9 @@ const AdcFlag AdcInterpolated = 6; // ADC sample is interpolated
 const AdcFlag AdcExtrapolated = 7; // ADC sample is extrapolated
 
 typedef unsigned int AdcChannel;
+typedef std::vector<AdcChannel> AdcChannelVector;
+
+typedef std::pair<AdcIndex, AdcIndex> AdcRoi;
+typedef std::vector<AdcRoi> AdcRoiVector;
 
 #endif

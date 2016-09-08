@@ -16,9 +16,9 @@ services:
   TimeTracker:       {}
   RandomNumberGenerator: {}
   FileCatalogMetadata:  @local::art_file_catalog_mc
-  user:         @local::dune35t_simulation_services
+  @table::dune35t_simulation_services
 }
-#services.user.PhotonVisibilityService:      @local::dune35t_photonvisibilityservice
+#services.PhotonVisibilityService:      @local::dune35t_photonvisibilityservice
 #source is now a root file
 source:
 {
@@ -94,7 +94,7 @@ physics.analyzers.pandorana.TrackModule: "particlestitcher"
 physics.analyzers.analysistree.HitsModuleLabel:          "linecluster"
 physics.analyzers.analysistree.TrackModuleLabel:         ["pmtrack"]
 physics.analyzers.analysistree.VertexModuleLabel:        ["pmtrack","linecluster"]
-physics.analyzers.analysistree.CalorimetryModuleLabel:   [""]
+physics.analyzers.analysistree.CalorimetryModuleLabel:   ["pmtrackcalo"]
 physics.analyzers.analysistree.ParticleIDModuleLabel:    [""]
 physics.analyzers.analysistree.MVAPIDTrackModuleLabel:   [""]
 physics.analyzers.analysistree.MVAPIDShowerModuleLabel:  [""]
