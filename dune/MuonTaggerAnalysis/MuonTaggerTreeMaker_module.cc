@@ -13,7 +13,7 @@
 #include "art/Framework/Principal/Handle.h"
 #include "art/Framework/Principal/Run.h"
 #include "art/Framework/Principal/SubRun.h"
-#include "art/Utilities/InputTag.h"
+#include "canvas/Utilities/InputTag.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "art/Framework/Services/Optional/TFileService.h"
@@ -27,10 +27,10 @@
 #include "larcore/Geometry/TPCGeo.h"
 #include "larcore/Geometry/AuxDetGeo.h"
 
-#include "SimulationBase/MCTruth.h"
-#include "SimulationBase/MCParticle.h"
-#include "larsim/Simulation/SimChannel.h"
-#include "larsim/Simulation/AuxDetSimChannel.h"
+#include "nusimdata/SimulationBase/MCTruth.h"
+#include "nusimdata/SimulationBase/MCParticle.h"
+#include "lardataobj/Simulation/SimChannel.h"
+#include "lardataobj/Simulation/AuxDetSimChannel.h"
 
 #include "TH1D.h"
 #include "TH2D.h"
@@ -487,7 +487,7 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
       _numberIDEs = 0;
       for (const auto& simChan : simChanVec)
       {
-        const std::map< unsigned short, std::vector< sim::IDE > > & tdcidemap = simChan->TDCIDEMap();
+        const auto & tdcidemap = simChan->TDCIDEMap();
         for(auto& tdcidepair : tdcidemap)
         {
           //auto tdc = tdcidepair.first;

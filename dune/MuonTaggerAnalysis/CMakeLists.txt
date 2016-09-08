@@ -4,17 +4,17 @@ art_make( MODULE_LIBRARIES larcore_Geometry
 	  larsim_MCCheater_BackTracker_service
 	  lardata_Utilities
 	  larevt_Filters
-	  lardata_RawData
-	  lardata_RecoBase
-	  lardata_RecoObjects
+      nusimdata_SimulationBase
+      lardataobj_RawData
+      lardataobj_RecoBase
 	  larreco_RecoAlg
 	  larpandora_LArPandoraInterface
 	  SignalShapingServiceDUNE10kt_service
 	  SignalShapingServiceDUNE35t_service
-          ${SIMULATIONBASE}
-          ${LARRECO_LIB}
-          ${LARDATA_LIB}
-          ${ART_FRAMEWORK_CORE}
+      ${SIMULATIONBASE}
+      ${LARRECO_LIB}
+      ${LARDATA_LIB}
+      ${ART_FRAMEWORK_CORE}
 	  ${ART_FRAMEWORK_PRINCIPAL}
 	  ${ART_FRAMEWORK_SERVICES_REGISTRY}
 	  ${ART_FRAMEWORK_SERVICES_OPTIONAL}
@@ -26,9 +26,9 @@ art_make( MODULE_LIBRARIES larcore_Geometry
 	  ${MF_UTILITIES}
 	  ${FHICLCPP}
 	  ${CETLIB}
-          ${ROOT_GEOM}
-          ${ROOT_XMLIO}
-          ${ROOT_GDML}
+      ${ROOT_GEOM}
+      ${ROOT_XMLIO}
+      ${ROOT_GDML}
 	  ${ROOT_BASIC_LIB_LIST}
         )
 
