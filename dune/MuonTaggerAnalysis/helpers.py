@@ -7,6 +7,7 @@ import csv
 import glob
 from math import exp
 from math import sqrt
+from math import log
 from math import log10
 import math
 import array
@@ -15,7 +16,453 @@ import sys
 import time
 import datetime
 import random
+import uuid
+import numbers
+import copy
 #import matplotlib.pyplot as mpl
+
+def plotManyFilesOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outSuffix="Hist",nMax=sys.maxint):
+  """
+  Plots the same histogram and cuts for a variety of files on one plot. Use to
+    compare the same histogram from different samples. Only for 1D Hists.
+
+  fileConfigs is a list of dictionaries configuring the files
+  histConfigs is a list of dictionaries configuring the histograms. It is a
+    list so you can do multiple plots.
+  canvas is a root TCanvas
+  treename is where to find the tree in each file
+
+  fileConfig options:
+    fn: filename REQUIRED
+    title: title of sample: will be used for legends
+    color: will be used for line/marker color
+    scaleFactor: scale histograms by this much after filling
+    pdg: PDG ID number (unused)
+    name: name of sample (unused)
+    addFriend: add friend tree to main tree. Should be a length 2 list [treename,filename]
+    cuts: additional cuts per file concat to histConfig cuts, default ""
+  histConfig options:
+    name: name of histogram, used for savename REQUIRED
+    xtitle: x axis title
+    ytitle: y axis title
+    binning: Binning list, either [nBins,min,max] or a list of bin edges REQUIRED
+    var: variable to draw, first argument to tree.Draw REQUIRED
+    cuts: cut string, second argument to tree.Draw REQUIRED
+    xlim: xlimits, a two element list of xlimits for plot
+    ylim: ylimits, a two element list of ylimits for plot
+    logy: if True, plot on y on log scale
+    logx: if True, plot on y on log scale
+    caption, captionleft1, captionleft2, captionleft3, captionright1,
+        captionright2, captionright3, preliminaryString:
+        all are passed to drawStandardCaptions
+    normToBinWidth: if True, normalize histogram to bin width (after applying
+        scaleFactor)
+    normalize: if True normalize histogram (after normToBinWidth)
+    integral: if True, makes each bin content Nevents for X >= bin low edge
+    title: (unused)
+    color: (unused)
+  """
+  
+  for fileConfig in fileConfigs:
+    f = root.TFile(fileConfig['fn'])
+    tree = f.Get(treename)
+    if 'addFriend' in fileConfig:
+      tree.AddFriend(*(fileConfig['addFriend']))
+    fileConfig['f'] = f
+    fileConfig['tree'] = tree
+
+  for histConfig in histConfigs:
+    # setup
+    hists = []
+    binning = histConfig['binning']
+    var = histConfig['var']
+    #if var.count(":") != 0:
+    #  raise Exception("No ':' allowed in variable, only 1D hists allowed",var)
+    cuts = histConfig['cuts']
+    xtitle = ""
+    ytitle = "Events/bin"
+    if "xtitle" in histConfig: xtitle = histConfig['xtitle']
+    if "ytitle" in histConfig: ytitle = histConfig['ytitle']
+    xlim = []
+    ylim = []
+    if "xlim" in histConfig: xlim = histConfig['xlim']
+    if "ylim" in histConfig: ylim = histConfig['ylim']
+    logy = False
+    logx = False
+    if "logy" in histConfig: logy = histConfig['logy']
+    if "logx" in histConfig: logx = histConfig['logx']
+    caption = ""
+    captionleft1 = ""
+    captionleft2 = ""
+    captionleft3 = ""
+    captionright1 = ""
+    captionright2 = ""
+    captionright3 = ""
+    preliminaryString = ""
+    if "caption" in histConfig: caption = histConfig['caption']
+    if "captionleft1" in histConfig: captionleft1 = histConfig['captionleft1']
+    if "captionleft2" in histConfig: captionleft2 = histConfig['captionleft2']
+    if "captionleft3" in histConfig: captionleft3 = histConfig['captionleft3']
+    if "captionright1" in histConfig: captionright1 = histConfig['captionright1']
+    if "captionright2" in histConfig: captionright2 = histConfig['captionright2']
+    if "captionright3" in histConfig: captionright3 = histConfig['captionright3']
+    if "preliminaryString" in histConfig: preliminaryString = histConfig['preliminaryString']
+    # now on to the real work
+    for fileConfig in fileConfigs:
+      hist = None
+      if len(binning) == 3:
+        hist = Hist(*binning)
+      else:
+        hist = Hist(binning)
+      if "color" in fileConfig:
+        hist.SetLineColor(fileConfig['color'])
+      varAndHist = var + " >> " + hist.GetName()
+      tree = fileConfig['tree']
+      thiscuts = copy.deepcopy(cuts)
+      if "cuts" in fileConfig:
+        thiscuts += fileConfig['cuts']
+      tree.Draw(varAndHist,thiscuts,"",nMax)
+      scaleFactor = 1.
+      if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
+      hist.Scale(scaleFactor)
+      if "normToBinWidth" in histConfig and histConfig["normToBinWidth"]:
+        normToBinWidth(hist)
+      if "normalize" in histConfig and histConfig['normalize']:
+        integral = hist.Integral()
+        if integral != 0.:
+          hist.Scale(1./integral)
+      if "integral" in histConfig and histConfig['integral']:
+        hist = getIntegralHist(hist)
+      hists.append(hist)
+    canvas.SetLogy(logy)
+    canvas.SetLogx(logx)
+    axisHist = makeStdAxisHist(hists,logy=logy,freeTopSpace=0.35,xlim=xlim,ylim=ylim)
+    setHistTitles(axisHist,xtitle,ytitle)
+    axisHist.Draw()
+    for h in reversed(hists):
+      h.Draw("histsame")
+    labels = [fileConfig['title'] for fileConfig in fileConfigs]
+    leg = drawNormalLegend(hists,labels)
+    drawStandardCaptions(canvas,caption,captionleft1=captionleft1,captionleft2=captionleft2,captionleft3=captionleft3,captionright1=captionright1,captionright2=captionright2,captionright3=captionright3,preliminaryString=preliminaryString)
+    canvas.RedrawAxis()
+    saveNameBase = outPrefix + histConfig['name'] + outSuffix
+    canvas.SaveAs(saveNameBase+".png")
+    canvas.SaveAs(saveNameBase+".pdf")
+    canvas.SetLogy(False)
+    canvas.SetLogx(False)
+
+def plotManyHistsOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outSuffix="Hist",nMax=sys.maxint):
+  """
+  For each file, plots multiple different histograms (cuts and/or variables) on one plot. Use to
+    compare different cuts or variables on the same sample. Only for 1D Hists.
+
+  fileConfigs is a list of dictionaries configuring the files. fileConfigs is a
+    list so you can plots for multiple samples.
+  histConfigs is a list of dictionaries configuring the histograms
+  canvas is a root TCanvas
+  treename is where to find the tree in each file
+
+  fileConfig options:
+    fn: filename REQUIRED
+    pdg: PDG ID number (unused)
+    name: name of sample, used for savename REQUIRED
+    title: title of sample (unused)
+    color:  (unused)
+    scaleFactor: scale histograms by this much after filling
+    addFriend: add friend tree to main tree. Should be a length 2 list [treename,filename]
+    caption, captionleft1, captionleft2, captionleft3, captionright1,
+        captionright2, captionright3, preliminaryString:
+        all are passed to drawStandardCaptions. histConfig arguments override these
+    cuts: additional cuts per file concat to histConfig cuts, default ""
+  histConfig options:
+    name: (unused)
+    title: title of histogram, used for legend
+    color: sets line/marker color of histogram
+    xtitle: x axis title, the first one found in the list is used
+    ytitle: y axis title, the first one found in the list is used
+    binning: Binning list, either [nBins,min,max] or a list of bin edges REQUIRED
+    var: variable to draw, first argument to tree.Draw REQUIRED
+    cuts: cut string, second argument to tree.Draw REQUIRED
+    xlim: xlimits, a two element list of xlimits for plot, first one found is used
+    ylim: ylimits, a two element list of ylimits for plot, first one found is used
+    logy: if True, plot on y on log scale. If any are True, will be logy.
+    logx: if True, plot on y on log scale. If any are True, will be logx.
+    caption, captionleft1, captionleft2, captionleft3, captionright1,
+        captionright2, captionright3, preliminaryString:
+        all are passed to drawStandardCaptions, first set of captions found is
+        used
+    normToBinWidth: if True, normalize histogram to bin width (after applying
+        scaleFactor)
+    normalize: if True normalize histogram (after normToBinWidth)
+    integral: if True, makes each bin content Nevents for X >= bin low edge
+  """
+  
+  for fileConfig in fileConfigs:
+    f = root.TFile(fileConfig['fn'])
+    tree = f.Get(treename)
+    if 'addFriend' in fileConfig:
+      tree.AddFriend(*(fileConfig['addFriend']))
+    fileConfig['f'] = f
+    fileConfig['tree'] = tree
+    xtitle = ""
+    ytitle = "Events/bin"
+    for histConfig in histConfigs:
+      if "xtitle" in histConfig: 
+        xtitle = histConfig['xtitle']
+        break
+    for histConfig in histConfigs:
+      if "ytitle" in histConfig: 
+        ytitle = histConfig['ytitle']
+        break
+    xlim = []
+    ylim = []
+    for histConfig in histConfigs:
+      if "xlim" in histConfig: 
+        xlim = histConfig['xlim']
+        break
+    for histConfig in histConfigs:
+      if "ylim" in histConfig: 
+        ylim = histConfig['ylim']
+        break
+    logy = False
+    logx = False
+    for histConfig in histConfigs:
+      if "logy" in histConfig and histConfig['logy']: logy = True
+      if "logx" in histConfig and histConfig['logx']: logx = True
+    caption = ""
+    captionleft1 = ""
+    captionleft2 = ""
+    captionleft3 = ""
+    captionright1 = ""
+    captionright2 = ""
+    captionright3 = ""
+    preliminaryString = ""
+    if "caption" in fileConfig: caption = fileConfig['caption']
+    if "captionleft1" in fileConfig: captionleft1 = fileConfig['captionleft1']
+    if "captionleft2" in fileConfig: captionleft2 = fileConfig['captionleft2']
+    if "captionleft3" in fileConfig: captionleft3 = fileConfig['captionleft3']
+    if "captionright1" in fileConfig: captionright1 = fileConfig['captionright1']
+    if "captionright2" in fileConfig: captionright2 = fileConfig['captionright2']
+    if "captionright3" in fileConfig: captionright3 = fileConfig['captionright3']
+    if "preliminaryString" in fileConfig: preliminaryString = fileConfig['preliminaryString']
+    for histConfig in histConfigs:
+        if "caption" in histConfig \
+                or "captionleft1" in histConfig \
+                or "captionleft2" in histConfig \
+                or "captionleft3" in histConfig \
+                or "captionright1" in histConfig \
+                or "captionright2" in histConfig \
+                or "captionright3" in histConfig \
+                or "preliminaryString" in histConfig:
+            if "caption" in histConfig: caption = histConfig['caption']
+            if "captionleft1" in histConfig: captionleft1 = histConfig['captionleft1']
+            if "captionleft2" in histConfig: captionleft2 = histConfig['captionleft2']
+            if "captionleft3" in histConfig: captionleft3 = histConfig['captionleft3']
+            if "captionright1" in histConfig: captionright1 = histConfig['captionright1']
+            if "captionright2" in histConfig: captionright2 = histConfig['captionright2']
+            if "captionright3" in histConfig: captionright3 = histConfig['captionright3']
+            if "preliminaryString" in histConfig: preliminaryString = histConfig['preliminaryString']
+
+    hists = []
+    for histConfig in histConfigs:
+      binning = histConfig['binning']
+      var = histConfig['var']
+      #if var.count(":") != 0:
+      #  raise Exception("No ':' allowed in variable, only 1D hists allowed",var)
+      cuts = histConfig['cuts']
+      thiscuts = copy.deepcopy(cuts)
+      if "cuts" in fileConfig:
+        thiscuts += fileConfig['cuts']
+      hist = None
+      if len(binning) == 3:
+        hist = Hist(*binning)
+      else:
+        hist = Hist(binning)
+      if 'color' in histConfig:
+        hist.SetLineColor(histConfig['color'])
+      varAndHist = var + " >> " + hist.GetName()
+      tree.Draw(varAndHist,thiscuts,"",nMax)
+      scaleFactor = 1.
+      if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
+      hist.Scale(scaleFactor)
+      if "normToBinWidth" in histConfig and histConfig["normToBinWidth"]:
+        normToBinWidth(hist)
+      if "normalize" in histConfig and histConfig['normalize']:
+        integral = hist.Integral()
+        if integral != 0.:
+          hist.Scale(1./integral)
+      if "integral" in histConfig and histConfig['integral']:
+        hist = getIntegralHist(hist)
+      hists.append(hist)
+    canvas.SetLogy(logy)
+    canvas.SetLogx(logx)
+    axisHist = makeStdAxisHist(hists,logy=logy,freeTopSpace=0.35,xlim=xlim,ylim=ylim)
+    setHistTitles(axisHist,xtitle,ytitle)
+    axisHist.Draw()
+    for h in reversed(hists):
+      h.Draw("histsame")
+    labels = [histConfig['title'] for histConfig in histConfigs]
+    leg = drawNormalLegend(hists,labels)
+    drawStandardCaptions(canvas,caption,captionleft1=captionleft1,captionleft2=captionleft2,captionleft3=captionleft3,captionright1=captionright1,captionright2=captionright2,captionright3=captionright3,preliminaryString=preliminaryString)
+    canvas.RedrawAxis()
+    saveNameBase = outPrefix + fileConfig['name'] + outSuffix
+    canvas.SaveAs(saveNameBase+".png")
+    canvas.SaveAs(saveNameBase+".pdf")
+    canvas.SetLogy(False)
+    canvas.SetLogx(False)
+
+def plotOneHistOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outSuffix="Hist",nMax=sys.maxint):
+  """
+  For each histogram in each file, plot a histogram on one plot. Works with 1D
+    and 2D histograms.
+
+  fileConfigs is a list of dictionaries configuring the files. fileConfigs is a
+    list so you can plots for multiple samples.
+  histConfigs is a list of dictionaries configuring the histograms. It is a
+    list so you can do multiple plots for each sample
+  canvas is a root TCanvas
+  treename is where to find the tree in each file
+
+  fileConfig options:
+    fn: filename REQUIRED
+    name: name of sample, used for savename REQUIRED
+    scaleFactor: scale histogram by this much after filling
+    pdg: PDG ID number (unused)
+    title: title of sample (unused)
+    color:  (unused)
+    caption, captionleft1, captionleft2, captionleft3, captionright1,
+        captionright2, captionright3, preliminaryString:
+        all are passed to drawStandardCaptions. histConfig arguments override these
+    cuts: additional cuts per file concat to histConfig cuts, default ""
+  histConfig options:
+    name: name of histogram, used for savename REQUIRED
+    color: sets line/marker color of histogram
+    xtitle: x axis title
+    ytitle: y axis title
+    ztitle: z axis title
+    binning: Binning list. For 1D, either [nBins,min,max] or a list of bin edges.
+        For 2D, [nBinsX,minX,maxX,nBinsY,minY,maxY] 
+        or [list of bin edges X, list of bin edges Y] REQUIRED
+    var: variable(s) to draw, first argument to tree.Draw REQUIRED
+    cuts: cut string, second argument to tree.Draw REQUIRED
+    xlim: xlimits, a two element list of xlimits for plot
+    ylim: ylimits, a two element list of ylimits for plot
+    logy: if True, plot on y on log scale
+    logx: if True, plot on y on log scale
+    caption, captionleft1, captionleft2, captionleft3, captionright1,
+        captionright2, captionright3, preliminaryString:
+        all are passed to drawStandardCaptions
+    normToBinWidth: if True, normalize histogram to bin width (after applying
+        scaleFactor)
+    normalize: if True normalize histogram (after normToBinWidth)
+    integral: if True, makes each bin content Nevents for X >= bin low edge.
+        For 2D plots, makes each bin content Nevents for X >= and Y >= 
+        their low bin edges.
+    title: (unused)
+    addFriend: add friend tree to main tree. Should be a length 2 list [treename,filename]
+  """
+  
+  for fileConfig in fileConfigs:
+    f = root.TFile(fileConfig['fn'])
+    tree = f.Get(treename)
+    if 'addFriend' in fileConfig:
+      tree.AddFriend(*(fileConfig['addFriend']))
+    for histConfig in histConfigs:
+      # setup
+      binning = histConfig['binning']
+      var = histConfig['var']
+      ncolon = var.count(":")
+      is2D = False
+      if ncolon > 1:
+        raise Exception("Multiple ':' not allowed in variable, only 1D/2D hists allowed",var)
+      elif ncolon == 1:
+        is2D = True
+      cuts = histConfig['cuts']
+      thiscuts = copy.deepcopy(cuts)
+      if "cuts" in fileConfig:
+        thiscuts += fileConfig['cuts']
+      xtitle = ""
+      ytitle = "Events/bin"
+      ztitle = None
+      if "xtitle" in histConfig: xtitle = histConfig['xtitle']
+      if "ytitle" in histConfig: ytitle = histConfig['ytitle']
+      if "ztitle" in histConfig: ztitle = histConfig['ztitle']
+      xlim = []
+      ylim = []
+      if "xlim" in histConfig: xlim = histConfig['xlim']
+      if "ylim" in histConfig: ylim = histConfig['ylim']
+      logy = False
+      logx = False
+      if "logy" in histConfig: logy = histConfig['logy']
+      if "logx" in histConfig: logx = histConfig['logx']
+      caption = ""
+      captionleft1 = ""
+      captionleft2 = ""
+      captionleft3 = ""
+      captionright1 = ""
+      captionright2 = ""
+      captionright3 = ""
+      preliminaryString = ""
+      if "caption" in fileConfig: caption = fileConfig['caption']
+      if "captionleft1" in fileConfig: captionleft1 = fileConfig['captionleft1']
+      if "captionleft2" in fileConfig: captionleft2 = fileConfig['captionleft2']
+      if "captionleft3" in fileConfig: captionleft3 = fileConfig['captionleft3']
+      if "captionright1" in fileConfig: captionright1 = fileConfig['captionright1']
+      if "captionright2" in fileConfig: captionright2 = fileConfig['captionright2']
+      if "captionright3" in fileConfig: captionright3 = fileConfig['captionright3']
+      if "preliminaryString" in fileConfig: preliminaryString = fileConfig['preliminaryString']
+      if "caption" in histConfig: caption = histConfig['caption']
+      if "captionleft1" in histConfig: captionleft1 = histConfig['captionleft1']
+      if "captionleft2" in histConfig: captionleft2 = histConfig['captionleft2']
+      if "captionleft3" in histConfig: captionleft3 = histConfig['captionleft3']
+      if "captionright1" in histConfig: captionright1 = histConfig['captionright1']
+      if "captionright2" in histConfig: captionright2 = histConfig['captionright2']
+      if "captionright3" in histConfig: captionright3 = histConfig['captionright3']
+      if "preliminaryString" in histConfig: preliminaryString = histConfig['preliminaryString']
+      # now on to the real work
+      hist = None
+      if is2D:
+        if len(binning) == 2:
+          hist = Hist(binning[0],binning[1])
+        else:
+          hist = Hist2D(*binning)
+      else:
+        if len(binning) == 3:
+          hist = Hist(*binning)
+        else:
+          hist = Hist(binning)
+      if 'color' in histConfig:
+        hist.SetLineColor(histConfig['color'])
+      varAndHist = var + " >> " + hist.GetName()
+      tree.Draw(varAndHist,thiscuts,"",nMax)
+      scaleFactor = 1.
+      if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
+      hist.Scale(scaleFactor)
+      if "normToBinWidth" in histConfig and histConfig["normToBinWidth"]:
+        normToBinWidth(hist)
+      if "normalize" in histConfig and histConfig['normalize']:
+        integral = hist.Integral()
+        if integral != 0.:
+          hist.Scale(1./integral)
+      if "integral" in histConfig and histConfig['integral']:
+        hist = getIntegralHist(hist)
+      setHistTitles(hist,xtitle,ytitle,ztitle)
+      canvas.SetLogy(logy)
+      canvas.SetLogx(logx)
+      if hist.InheritsFrom("TH2"):
+        setupCOLZFrame(canvas)
+        hist.Draw("colz")
+      else:
+        hist.Draw("hist")
+      drawStandardCaptions(canvas,caption,captionleft1=captionleft1,captionleft2=captionleft2,captionleft3=captionleft3,captionright1=captionright1,captionright2=captionright2,captionright3=captionright3,preliminaryString=preliminaryString)
+      canvas.RedrawAxis()
+      saveNameBase = outPrefix + histConfig['name'] + "_" + fileConfig['name'] + outSuffix
+      canvas.SaveAs(saveNameBase+".png")
+      canvas.SaveAs(saveNameBase+".pdf")
+      if hist.InheritsFrom("TH2"):
+        setupCOLZFrame(canvas,True) #reset frame
+      canvas.SetLogy(False)
+      canvas.SetLogx(False)
 
 def getOrdinalStr(inInt):
   result = str(inInt)
@@ -101,8 +548,12 @@ def doubleGauss(x,par):
   #return meanG1 + widthG1*x[0]
   
 def getXBinHist(inHist, xBin):
+  """
+  Makes a TH1 hisogram from a TH2
+  A vertical slice of a 2D histo
+  """
   outHist = inHist.ProjectionY()
-  outHist.Clear()
+  outHist.Reset()
   outHist.SetName(inHist.GetName()+"XSliceBin"+str(xBin))
   outHist.Sumw2()
   nBins = outHist.GetXaxis().GetNbins()
@@ -112,11 +563,15 @@ def getXBinHist(inHist, xBin):
   return outHist
 
 def getYBinHist(inHist, yBin):
+  """
+  Makes a TH1 hisogram from a TH2
+  A horizontal slice of a 2D histo
+  """
   outHist = inHist.ProjectionX()
-  outHist.Clear()
+  outHist.Reset()
   outHist.SetName(inHist.GetName()+"YSliceBin"+str(yBin))
   outHist.Sumw2()
-  nBins = outHist.GetYaxis().GetNbins()
+  nBins = outHist.GetXaxis().GetNbins()
   for i in range(0,nBins+2):
     outHist.SetBinContent(i,inHist.GetBinContent(i,yBin))
     outHist.SetBinError(i,inHist.GetBinError(i,yBin))
@@ -131,24 +586,42 @@ def divideYValByXVal(hist):
 	hist.SetBinContent(iBinX,binVal/xVal)
 	hist.SetBinError(iBinX,binErrVal/xVal)
 
-def setNormalColorTable():
-  rArray = array.array('d',[0.0,1.0,1.0])
-  gArray = array.array('d',[1.0,1.0,0.0])
-  bArray = array.array('d',[0.0,0.0,0.0])
-  stopArray = array.array('d',[0.,0.5,1.])
-  nTabColors = 500
-  root.TColor.CreateGradientColorTable(len(stopArray),
-            stopArray,rArray,gArray,bArray,nTabColors
-         )
-def setInvertColorTable():
-  rArray = array.array('d',[1.0,1.0,0.0])
-  gArray = array.array('d',[0.0,1.0,1.0])
-  bArray = array.array('d',[0.0,0.0,0.0])
-  stopArray = array.array('d',[0.,0.5,1.])
-  nTabColors = 500
-  root.TColor.CreateGradientColorTable(len(stopArray),
-            stopArray,rArray,gArray,bArray,nTabColors
-         )
+def setNormalColorTable(diverging=False):
+  if diverging:
+    gStyle.SetPalette(54)
+  else:
+    ## My old GYR colors
+    #rArray = array.array('d',[0.0,1.0,1.0])
+    #gArray = array.array('d',[1.0,1.0,0.0])
+    #bArray = array.array('d',[0.0,0.0,0.0])
+    #stopArray = array.array('d',[0.,0.5,1.])
+    #nTabColors = 500
+    #root.TColor.CreateGradientColorTable(len(stopArray),
+    #          stopArray,rArray,gArray,bArray,nTabColors
+    #       )
+
+    ## nice grey scale
+    #alpha = 1.
+    #stops = [ 0.0000, 0.1250, 0.2500, 0.3750, 0.5000, 0.6250, 0.7500, 0.8750, 1.0000]
+    #red   = [ 0./255., 32./255., 64./255., 96./255., 128./255., 160./255., 192./255., 224./255., 255./255.];
+    #green = [ 0./255., 32./255., 64./255., 96./255., 128./255., 160./255., 192./255., 224./255., 255./255.];
+    #blue  = [ 0./255., 32./255., 64./255., 96./255., 128./255., 160./255., 192./255., 224./255., 255./255.];
+    #root.TColor.CreateGradientColorTable(len(stops), 
+    #              array.array('d',stops), array.array('d',red), 
+    #              array.array('d',green), array.array('d',blue), 255, alpha
+    #          )
+
+    # bird color palette from root 6
+    alpha = 1.
+    stops = [ 0.0000, 0.1250, 0.2500, 0.3750, 0.5000, 0.6250, 0.7500, 0.8750, 1.0000]
+    red = [ 0.2082, 0.0592, 0.0780, 0.0232, 0.1802, 0.5301, 0.8186, 0.9956, 0.9764]
+    green = [ 0.1664, 0.3599, 0.5041, 0.6419, 0.7178, 0.7492, 0.7328, 0.7862, 0.9832]
+    blue = [ 0.5293, 0.8684, 0.8385, 0.7914, 0.6425, 0.4662, 0.3499, 0.1968, 0.0539]
+    root.TColor.CreateGradientColorTable(len(stops), 
+                  array.array('d',stops), array.array('d',red), 
+                  array.array('d',green), array.array('d',blue), 255, alpha
+              )
+
 
 def setStyle():
   gStyle.SetCanvasColor(0)
@@ -217,9 +690,16 @@ def setStyle():
   
 setStyle()
 
-def setHistTitles(hist,xlabel,ylabel):
+def setHistTitles(hist,xlabel,ylabel,zlabel=None,title=""):
+    hist.SetTitle(title)
     hist.GetXaxis().SetTitle(xlabel)
     hist.GetYaxis().SetTitle(ylabel)
+    if zlabel:
+      hist.GetZaxis().SetTitle(zlabel)
+
+def setHistRange(hist,xMin,xMax,yMin,yMax):
+    hist.GetXaxis().SetRangeUser(xMin,xMax)
+    hist.GetYaxis().SetRangeUser(yMin,yMax)
 
 def makeWeightHist(f1,canvas,leg):
   firstHist = True
@@ -1157,16 +1637,31 @@ class PlotOfSlices:
 
 def getIntegralHist(hist,setErrors=True):
   result = hist.Clone(hist.GetName()+"_Integral")
-  nBins = result.GetNbinsX()
-  for i in range(nBins+1):
-    sumw = 0.0
-    sumw2 = 0.0
-    for j in range(i,nBins+2):
-      sumw += result.GetBinContent(j)
-      sumw2 += (result.GetBinError(j))**2
-    result.SetBinContent(i,sumw)
-    if setErrors:
-        result.SetBinError(i,sumw2**0.5)
+  if hist.InheritsFrom("TH2"):
+    nBinsX = result.GetNbinsX()
+    nBinsY = result.GetNbinsY()
+    for iX in range(nBinsX+2):
+      for iY in range(nBinsY+2):
+        sumw = 0.0
+        sumw2 = 0.0
+        for jX in range(iX,nBinsX+2):
+          for jY in range(iY,nBinsY+2):
+            sumw += result.GetBinContent(jX,jY)
+            sumw2 += (result.GetBinError(jX,jY))**2
+        result.SetBinContent(iX,iY,sumw)
+        if setErrors:
+            result.SetBinError(iX,iY,sumw2**0.5)
+  else:
+    nBins = result.GetNbinsX()
+    for i in range(nBins+1):
+      sumw = 0.0
+      sumw2 = 0.0
+      for j in range(i,nBins+2):
+        sumw += result.GetBinContent(j)
+        sumw2 += (result.GetBinError(j))**2
+      result.SetBinContent(i,sumw)
+      if setErrors:
+          result.SetBinError(i,sumw2**0.5)
   return result
 
 def hist2to1(hist):
@@ -1278,7 +1773,7 @@ def getIntegralAll(hist,boundaries=[]):
   xbinHigh = None
   if len(boundaries)==0:
     xbinLow = 0
-    xbinHigh = hist.GetXaxis().GetNbins()
+    xbinHigh = hist.GetXaxis().GetNbins()+1
   elif len(boundaries)==2:
     xbinLow, xbinHigh = getXbinsHighLow(hist,boundaries[0],boundaries[1])
   else:
@@ -1387,8 +1882,10 @@ def getHistMax(hist):
   result = hist.GetBinContent(iBin)
   return result
 
-def makeStdAxisHist(histList,logy=False,freeTopSpace=0.5):
+def makeStdAxisHist(histList,logy=False,freeTopSpace=0.5,xlim=[],ylim=[]):
   assert(len(histList)>0)
+  assert(len(xlim)==0 or len(xlim)==2)
+  assert(len(ylim)==0 or len(ylim)==2)
   multiplier = 1./(1.-freeTopSpace)
   yMin = 0.
   yMax = 0.
@@ -1400,13 +1897,23 @@ def makeStdAxisHist(histList,logy=False,freeTopSpace=0.5):
     nBins = hist.GetNbinsX()
     xMax = max(xMax,hist.GetXaxis().GetBinUpEdge(nBins))
     xMin = min(xMin,hist.GetBinLowEdge(1))
+  if yMax == 0.:
+    yMax = 1.
   if logy:
     yMin = 10**(-1)
     yMax = (math.log10(yMax) + 1.)*multiplier - 1.
     yMax = 10**yMax
   else:
     yMax = yMax*multiplier
-  axisHist = root.TH2F("axisHist"+str(random.randint(1000,1000000)),"",1,xMin,xMax,1,yMin,yMax)
+    if yMax == 0.:
+      yMax = 1.
+  if len(xlim)==2:
+    xMin = xlim[0]
+    xMax = xlim[1]
+  if len(ylim)==2:
+    yMin = ylim[0]
+    yMax = ylim[1]
+  axisHist = root.TH2F(uuid.uuid1().hex,"",1,xMin,xMax,1,yMin,yMax)
   return axisHist
 
 def getLogBins(nBins,xMin,xMax):
@@ -1422,6 +1929,7 @@ def drawNormalLegend(hists,labels,option="l"):
   leg.SetLineColor(root.kWhite)
   for hist,label in zip(hists,labels):
     leg.AddEntry(hist,label,option)
+  leg.Draw()
   return leg
 
 def setupCOLZFrame(pad,reset=False):
@@ -1430,8 +1938,89 @@ def setupCOLZFrame(pad,reset=False):
    else:
      pad.SetRightMargin(0.15)
 
+def normToBinWidth(hist):
+  """
+  For TH1, normalizes bin contents to bin width (divides by bin width)
+  For TH2, normalizes bin contents to bin area (divides by bin area)
+  """
+  if hist.InheritsFrom("TH2"):
+    nBinsX = hist.GetNbinsX()
+    nBinsY = hist.GetNbinsY()
+    for iX in range(1,nBinsX+1):
+      for iY in range(1,nBinsY+1):
+        binContent = hist.GetBinContent(iX,iY)
+        binWidthX = hist.GetXaxis().GetBinWidth(iX)
+        binWidthY = hist.GetYaxis().GetBinWidth(iY)
+        binArea = binWidthX*binWidthY
+        hist.SetBinContent(iX,iY,binContent/binArea)
+    return hist
+  else:
+    xaxis = hist.GetXaxis()
+    nBins = xaxis.GetNbins()
+    for i in range(1,nBins+1):
+      binContent = hist.GetBinContent(i)
+      binWidth = hist.GetBinWidth(i)
+      hist.SetBinContent(i,binContent/binWidth)
+    return hist
+
+def Hist(*args,**kargs):
+  """
+  Returns TH1F with UUID for name and "" for title.
+  The arguments are used as the binning.
+  """
+  func = root.TH1F
+  if "TH1D" in kargs and kargs["TH1D"]:
+    func = root.TH1D
+  if "TEfficiency" in kargs and kargs["TEfficiency"]:
+    func = root.TEfficiency
+  name = uuid.uuid1().hex
+  hist = None
+  if len(args) == 1 and type(args[0]) == list:
+    hist = func(name,"",len(args[0])-1,array.array('f',args[0]))
+  elif len(args) == 3:
+    for i in range(3):
+      if not isinstance(args[i],numbers.Number):
+        raise Exception(i,"th argument is not a number")
+    hist = func(name,"",args[0],args[1],args[2])
+  else:
+    raise Exception("Hist: Innapropriate arguments, requires either nBins, low, high or a list of bin edges:",args)
+  return hist
+
+def Hist2D(*args,**kargs):
+  """
+  Returns TH1F with UUID for name and "" for title.
+  The arguments are used as the binning.
+  """
+  func = root.TH2F
+  if "TH2D" in kargs and kargs["TH2D"]:
+    func = root.TH2D
+  if "TEfficiency" in kargs and kargs["TEfficiency"]:
+    func = root.TEfficiency
+  name = uuid.uuid1().hex
+  hist = None
+  if len(args) == 2 and type(args[0]) == list and type(args[1]) == list:
+    hist = func(name,"",len(args[0])-1,array.array('f',args[0]),len(args[1])-1,array.array('f',args[1]))
+  elif len(args) == 6:
+    for i in range(6):
+      if not isinstance(args[i],numbers.Number):
+        raise Exception(i,"th argument is not a number")
+    hist = func(name,"",args[0],args[1],args[2],args[3],args[4],args[5])
+  elif len(args) == 4:
+    if type(args[0]) == list:
+      for i in range(1,4):
+        if not isinstance(args[i],numbers.Number):
+          raise Exception(i,"th argument is not a number")
+      hist = func(name,"",len(args[0])-1,array.array('d',args[0]),args[1],args[2],args[3])
+    elif type(args[3]) == list:
+      for i in range(3):
+        if not isinstance(args[i],numbers.Number):
+          raise Exception(i,"th argument is not a number")
+      hist = func(name,"",args[0],args[1],args[2],len(args[3])-1,array.array('d',args[3]))
+  else:
+    raise Exception("Hist: Innapropriate arguments, requires either nBins, low, high or a list of bin edges:",args)
+  return hist
+
 if __name__ == "__main__":
 
   root.gROOT.SetBatch(True)
   print("Running helpers.py")
-  
