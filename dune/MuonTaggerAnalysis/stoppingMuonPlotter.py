@@ -107,10 +107,37 @@ def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel
   setupCOLZFrame(canvas,reset=True)
   return hist
 
+def estimatePerSrForVerticalAndEgt1GeV(tree,nmax=10000000000):
+   canvas = root.TCanvas("c2")
+ 
+   func = root.TF1("fitfunc","[0]*cos(x)*cos(x)",0,math.pi)
+ 
+   cuts = "pEb>1."
+   #cuts = "pEb>1. && xb > -200 && xb < 200 && zb > 100 && zb < 500"
+   theta = Hist(100,0,math.pi)
+   theta.Sumw2()
+   theta.UseCurrentStyle()
+   tree.Draw("pi-thetazenithb >> {}".format(theta.GetName()),cuts,"hist",nmax    )
+   setHistTitles(theta,"#theta","Events/Sr")
+   drawStandardCaptions(canvas,"E_{#mu} > 1 GeV")
+   xAxis = theta.GetXaxis()
+   for iBinX in range(1,xAxis.GetNbins()+1):
+     xLow = xAxis.GetBinLowEdge(iBinX)
+     xHigh = xAxis.GetBinUpEdge(iBinX)
+     solidAngle = 2*math.pi*(-math.cos(xHigh)+math.cos(xLow))
+     binContent = theta.GetBinContent(iBinX)
+     theta.SetBinContent(iBinX,binContent/solidAngle)
+   theta.Draw("E")
+   fitResult = theta.Fit(func,"WLMSQ",'',0.05,0.8)
+   canvas.SaveAs("normalizationFit.png")
+ 
+   normalization = fitResult.Parameter(0)
+   normalizationUnc = fitResult.ParError(0)
+   return normalization, normalizationUnc
 
 if __name__ == "__main__":
   c = root.TCanvas()
-  f = root.TFile("/scratch/dune/jhugon/MuonTaggerTree_50_newnew.root")
+  f = root.TFile("/pnfs/dune/persistent/users/jhugon/v06_05_00/g4/muontaggertree_v1/anahist.root")
   
   tree = f.Get("muontaggertreemaker/tree")
   nEvents = tree.GetEntries()
@@ -125,31 +152,31 @@ if __name__ == "__main__":
   #    print tree.xe, tree.ye, tree.ze, tree.pe
   #tree.Scan("numberTrajectoryPoints")
 
-  ## I think the sample assumes the detector is x: 0-200 and z: 0-150
+  print estimatePerSrForVerticalAndEgt1GeV(tree)
 
-  plotVariable1D(tree,c,"xb",100,-100,300,"Muon Starting x [cm]","Events/bin","Start_x.png",cuts="")
-  plotVariable1D(tree,c,"yb",500,0,1000,"Muon Starting y [cm]","Events/bin","Start_y.png",cuts="")
-  plotVariable1D(tree,c,"zb",100,-100,250,"Muon Starting z [cm]","Events/bin","Start_z.png",cuts="")
+  plotVariable1D(tree,c,"xb",100,-1000,1000,"Muon Starting x [cm]","Events/bin","Start_x.png",cuts="")
+  plotVariable1D(tree,c,"yb",50,0,1000,"Muon Starting y [cm]","Events/bin","Start_y.png",cuts="")
+  plotVariable1D(tree,c,"zb",100,-200,1000,"Muon Starting z [cm]","Events/bin","Start_z.png",cuts="")
   #plotVariable2D(tree,c,"yb:xb",40,-400,400,40,0,800,"Muon Starting x [cm]","Muon Starting y [cm]","Start_yVx.png",cuts="")
   #plotVariable2D(tree,c,"zb:yb",40,0,800,35,-10,690,"Muon Starting y [cm]","Muon Starting z [cm]","Start_zVy.png",cuts="")
-  plotVariable2D(tree,c,"zb:xb",40,-100,300,35,-100,250,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx.png",cuts="")
-  plotVariable2D(tree,c,"zb:xb",40,-100,300,35,-100,250,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx_cuts.png",cuts="thetazenithb > pi*170/180",caption="#theta_{zenith} > 170 deg")
-  plotVariable2D(tree,c,"zb:xb",100,-150,350,100,-150,250,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx_cuts2.png",cuts="thetazenithb > pi*178/180",caption="#theta_{zenith} > 178 deg")
+  plotVariable2D(tree,c,"zb:xb",30,-600,600,30,-200,1000,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx.png",cuts="")
+  plotVariable2D(tree,c,"zb:xb",15,-600,600,15,-200,1000,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx_cuts.png",cuts="thetazenithb > pi*170/180",caption="#theta_{zenith} > 170 deg")
+  plotVariable2D(tree,c,"zb:xb",15,-600,600,15,-200,1000,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx_cuts2.png",cuts="thetazenithb > pi*178/180",caption="#theta_{zenith} > 178 deg")
 
-  plotVariable2D(tree,c,"ye:xe",8,0,200,12,0,600,"Stopping Muon x [cm]","Stopping Muon y [cm]","Stop_yVx.png",cuts="inWideTPCe && pe<0.01 && ze > 0 && ze < 150")
-  plotVariable2D(tree,c,"ye:ze",6,0,150,12,0,600,"Stopping Muon z [cm]","Stopping Muon y [cm]","Stop_yVz.png",cuts="inWideTPCe && pe<0.01 && xe > 0 && xe < 200")
-  plotVariable2D(tree,c,"ze:xe",8,0,200,6,0,150,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx.png",cuts="inWideTPCe && pe<0.01 && ye > 0 && ye < 600")
+  plotVariable2D(tree,c,"ye:xe",15,-600,600,12,0,608,"Stopping Muon x [cm]","Stopping Muon y [cm]","Stop_yVx.png",cuts="inWideTPCe && pe<0.01")
+  plotVariable2D(tree,c,"ye:ze",15,-200,1000,12,0,608,"Stopping Muon z [cm]","Stopping Muon y [cm]","Stop_yVz.png",cuts="inWideTPCe && pe<0.01")
+  plotVariable2D(tree,c,"ze:xe",15,-600,600,15,-200,1000,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx.png",cuts="inWideTPCe && pe<0.01")
 
-  plotVariable2D(tree,c,"ze:xe",40,-400,400,35,-10,690,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx_cuts.png",cuts="inWideTPCe && pe<0.01 && xb < 200 & xb > 0 && zb < 200 && zb > 0",caption="Muon Starting 0<x<200 cm and 0<z<200cm")
+  #plotVariable2D(tree,c,"ze:xe",40,-400,400,35,-10,690,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx_cuts.png",cuts="inWideTPCe && pe<0.01 && xb < 200 & xb > 0 && zb < 200 && zb > 0",caption="Muon Starting 0<x<200 cm and 0<z<200cm")
 
-  plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",40,-400,400,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
+  plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",30,-200,1000,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
 
-  stop_y_hist = plotVariable1D(tree,c,"ye",6,0,600,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
+  stop_y_hist = plotVariable1D(tree,c,"ye",6,0,608,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01",scaleFactor=scaleFactor)
   print "stop_y_hist integral: {0}".format(stop_y_hist.Integral())
-  stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_ally.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
+  stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_ally.png",cuts="pe<0.01",scaleFactor=scaleFactor)
   print "stop_ally_hist integral: {0}".format(stop_ally_hist.Integral())
-  plotVariable1D(tree,c,"ye",10,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mosty.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
-  plotVariable1D(tree,c,"ye",100,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate [Hz m^{-3}]","Stop_mostyfine.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125",scaleFactor=scaleFactor)
+  plotVariable1D(tree,c,"ye",10,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_mosty.png",cuts="pe<0.01",scaleFactor=scaleFactor)
+  plotVariable1D(tree,c,"ye",100,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_mostyfine.png",cuts="pe<0.01",scaleFactor=scaleFactor)
 
   #plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125")
   plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01")
