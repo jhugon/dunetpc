@@ -167,6 +167,8 @@ private:
   bool _inTPCe;
   bool _inWideTPCe;
 
+  float _rangeInWideTPC;
+
   int _numberTrajectoryPoints;
 
   std::vector<float> _trajx;
@@ -273,6 +275,8 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _outtree->Branch("inTPCe",&_inTPCe,"inTPCe/O");
   _outtree->Branch("inWideTPCe",&_inWideTPCe,"inWideTPCe/O");
 
+  _outtree->Branch("rangeInWideTPC",&_rangeInWideTPC,"rangeInWideTPC/F");
+
   _outtree->Branch("numberTrajectoryPoints",&_numberTrajectoryPoints,"numberTrajectoryPoints/I");
 
   if (_writeTrajectoryInfo)
@@ -372,11 +376,14 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
   auto simChanHand = e.getValidHandle<std::vector<sim::SimChannel>>(_simChannelTag);
   std::vector<art::Ptr<sim::SimChannel>> simChanVec;
-  art::fill_ptr_vector(simChanVec, simChanHand);
+  if (_writeIDEInfo)
+  {
+    art::fill_ptr_vector(simChanVec, simChanHand);
+  }
 
-  auto auxDetSimChanHand = e.getValidHandle<std::vector<sim::AuxDetSimChannel>>(_auxDetSimChannelTag);
-  std::vector<art::Ptr<sim::AuxDetSimChannel>> auxDetSimChanVec;
-  art::fill_ptr_vector(auxDetSimChanVec, auxDetSimChanHand);
+  //auto auxDetSimChanHand = e.getValidHandle<std::vector<sim::AuxDetSimChannel>>(_auxDetSimChannelTag);
+  //std::vector<art::Ptr<sim::AuxDetSimChannel>> auxDetSimChanVec;
+  //art::fill_ptr_vector(auxDetSimChanVec, auxDetSimChanHand);
 
   art::ServiceHandle<geo::Geometry> geom;
 
@@ -431,6 +438,8 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
     _numberTrajectoryPoints = mcPart->NumberTrajectoryPoints();
 
+    _rangeInWideTPC=0.;
+    bool lastPointInAWideTPC = false;
     for(unsigned iPoint=0; iPoint<mcPart->NumberTrajectoryPoints(); iPoint++)
     {
       _trajectoryX->Fill(mcPart->Position(iPoint).X());
@@ -478,6 +487,12 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
           _trajdEdx.push_back(nanf(""));
         }
       } // if _writeTrajectoryInfo
+
+      if (isInAWideTPC && lastPointInAWideTPC)
+      {
+        _rangeInWideTPC += (mcPart->Position(iPoint).Vect()-mcPart->Position(iPoint-1).Vect()).Mag();
+      }
+      lastPointInAWideTPC = isInAWideTPC;
     } // for iPoint
 
     if (_writeIDEInfo)
