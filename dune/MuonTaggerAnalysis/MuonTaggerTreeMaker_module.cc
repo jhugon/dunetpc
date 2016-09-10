@@ -136,6 +136,10 @@ private:
   // tree data members
   //
 
+  UInt_t _event;
+  UInt_t _subrun;
+  UInt_t _run;
+
   float _xb;
   float _yb;
   float _zb;
@@ -243,6 +247,10 @@ void dune::MuonTaggerTreeMaker::beginJob()
 {
   art::ServiceHandle<art::TFileService> tfs;
   _outtree = tfs->make<TTree>("tree","tree");
+
+  _outtree->Branch("event",&_event,"event/i");
+  _outtree->Branch("subrun",&_subrun,"subrun/i");
+  _outtree->Branch("run",&_run,"run/i");
 
   _outtree->Branch("xb",&_xb,"xb/F");
   _outtree->Branch("yb",&_yb,"yb/F");
@@ -354,20 +362,9 @@ void dune::MuonTaggerTreeMaker::beginJob()
 void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 {
   // Implementation of required member function here.
-
-  // Zero out vectors for tree
-  _trajx.clear();
-  _trajy.clear();
-  _trajz.clear();
-  _trajt.clear();
-  _trajp.clear();
-  _trajE.clear();
-  _trajdEdx.clear();
-  _trajInTPC.clear();
-  _trajInWideTPC.clear();
-  _idex.clear();
-  _idey.clear();
-  _idez.clear();
+  _event = e.event();
+  _subrun = e.subRun();
+  _run = e.run();
 
   //Get needed data products
   auto mcPartHand = e.getValidHandle<std::vector<simb::MCParticle>>(_mcParticleTag);
@@ -396,6 +393,20 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     //std::cout << " Process: "<< mcPart->Process() << " EndProcess: "<<mcPart->EndProcess()<<" NumberDaughters: "<<mcPart->NumberDaughters() << std::endl;
     if (abs(mcPart->PdgCode()) != 13)
         continue;
+
+    // Zero out vectors for tree
+    _trajx.clear();
+    _trajy.clear();
+    _trajz.clear();
+    _trajt.clear();
+    _trajp.clear();
+    _trajE.clear();
+    _trajdEdx.clear();
+    _trajInTPC.clear();
+    _trajInWideTPC.clear();
+    _idex.clear();
+    _idey.clear();
+    _idez.clear();
 
     //_hitsFrontDet = hitsDetectorPlane(*mcPart,false); // front
     //_hitsBackDet = hitsDetectorPlane(*mcPart,true); // back
@@ -525,6 +536,8 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
       } // for simChanVec
     } // if _writeIDEInfo
 
+    _outtree->Fill();
+  
   } // for mcPartVec
 
   //for (const auto& simChan : simChanVec)
@@ -556,8 +569,6 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
 
   //} // for auxDetSimChanVec
 
-  _outtree->Fill();
-  
 }
 
 void dune::MuonTaggerTreeMaker::endJob()
