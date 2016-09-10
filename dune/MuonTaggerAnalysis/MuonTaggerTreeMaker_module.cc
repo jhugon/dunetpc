@@ -140,6 +140,8 @@ private:
   UInt_t _subrun;
   UInt_t _run;
 
+  Int_t _pdg;
+
   float _xb;
   float _yb;
   float _zb;
@@ -184,6 +186,7 @@ private:
   std::vector<float> _trajdEdx;
   std::vector<bool> _trajInTPC;
   std::vector<bool> _trajInWideTPC;
+  std::vector<float> _trajDistToLine;
 
   int _numberIDEs;
   std::vector<float> _idex;
@@ -214,6 +217,7 @@ private:
 
   // private functions
   bool hitsDetectorPlane(const simb::MCParticle& part, TLorentzVector& hitLoc, bool backDetector = false); // if false, front detector
+  float findDistanceClosest(const TLorentzVector& point, const TLorentzVector& linePoint1, const TLorentzVector& linePoint2) const;
 };
 
 
@@ -262,6 +266,8 @@ void dune::MuonTaggerTreeMaker::beginJob()
   _outtree->Branch("subrun",&_subrun,"subrun/i");
   _outtree->Branch("run",&_run,"run/i");
 
+  _outtree->Branch("pdg",&_pdg,"pdg/I");
+
   _outtree->Branch("xb",&_xb,"xb/F");
   _outtree->Branch("yb",&_yb,"yb/F");
   _outtree->Branch("zb",&_zb,"zb/F");
@@ -308,6 +314,7 @@ void dune::MuonTaggerTreeMaker::beginJob()
     _outtree->Branch("trajdEdx",&_trajdEdx);
     _outtree->Branch("trajInTPC",&_trajInTPC);
     _outtree->Branch("trajInWideTPC",&_trajInWideTPC);
+    _outtree->Branch("trajDistToLine",&_trajDistToLine);
   }
   if (_writeIDEInfo)
   {
@@ -424,6 +431,7 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     _trajdEdx.clear();
     _trajInTPC.clear();
     _trajInWideTPC.clear();
+    _trajDistToLine.clear();
     _idex.clear();
     _idey.clear();
     _idez.clear();
@@ -461,6 +469,8 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
       _backDetHitT = 0.;
     }
 
+    _pdg = mcPart->PdgCode();
+
     _xb = mcPart->Position().X();
     _yb = mcPart->Position().Y();
     _zb = mcPart->Position().Z();
@@ -468,7 +478,6 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
     _minMaxFinderXb.addPoint(_xb);
     _minMaxFinderYb.addPoint(_yb);
     _minMaxFinderZb.addPoint(_zb);
-
 
     _xe = mcPart->EndPosition().X();
     _ye = mcPart->EndPosition().Y();
@@ -532,6 +541,13 @@ void dune::MuonTaggerTreeMaker::analyze(art::Event const & e)
         _trajE.push_back(mcPart->Momentum(iPoint).E());
         _trajInTPC.push_back(isInATPC);
         _trajInWideTPC.push_back(isInAWideTPC);
+        float distanceToLine = -1.;
+        if (_hitsFrontDet && _hitsBackDet)
+        {
+          distanceToLine = findDistanceClosest(mcPart->Position(iPoint),frontDetHitLoc,backDetHitLoc);
+        }
+        _trajDistToLine.push_back(distanceToLine);
+        
         if (iPoint > 0)
         {
           //float pathLength = (vec3-mcPart->Position().Vect()).Mag();
@@ -741,6 +757,22 @@ bool dune::MuonTaggerTreeMaker::hitsDetectorPlane(const simb::MCParticle& part, 
     std::cout << "Error: Could not find where trajectory crosses detector in Z" << std::endl;
     return false;
   }
+}
+
+float dune::MuonTaggerTreeMaker::findDistanceClosest(const TLorentzVector& tlpoint, const TLorentzVector& tllinePoint1, const TLorentzVector& tllinePoint2) const
+{
+  const TVector3 point = tlpoint.Vect();
+  const TVector3 linePoint1 = tllinePoint1.Vect();
+  const TVector3 linePoint2 = tllinePoint2.Vect();
+
+  TVector3 dirUnitVec = linePoint2-linePoint1;
+  dirUnitVec *= 1./(dirUnitVec.Mag());
+  std::cout << "dirUnitVec: " << dirUnitVec.X() << " "<< dirUnitVec.Y() << " "<< dirUnitVec.Z() << ", mag: " << dirUnitVec.Mag() << std::endl;
+
+  const TVector3 pointMinusLP1 = point - linePoint1;
+  float result = (pointMinusLP1 - dirUnitVec * (pointMinusLP1*dirUnitVec) ).Mag();
+
+  return result;
 }
 
 DEFINE_ART_MODULE(dune::MuonTaggerTreeMaker)
