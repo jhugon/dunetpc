@@ -44,7 +44,7 @@ physics:
       backDetectorYmax: 608
       backDetectorZ: 696.2
 
-      writeTrajectoryInfo: true
+      writeTrajectoryInfo: false
       writeIDEInfo: false
     }
   }
