@@ -59,6 +59,8 @@ def plotManyFilesOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
         scaleFactor)
     normalize: if True normalize histogram (after normToBinWidth)
     integral: if True, makes each bin content Nevents for X >= bin low edge
+    printIntegral: if True, prints integral of histogram i.e. events that 
+        pass cuts * scale factor
     title: (unused)
     color: (unused)
   """
@@ -125,6 +127,8 @@ def plotManyFilesOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
       scaleFactor = 1.
       if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
       hist.Scale(scaleFactor)
+      if "printIntegral" in histConfig and histConfig["printIntegral"]:
+        print "Integral: {2} for hist: '{0}' file: '{1}'".format(histConfig["name"], fileConfig["name"], getIntegralAll(hist))
       if "normToBinWidth" in histConfig and histConfig["normToBinWidth"]:
         normToBinWidth(hist)
       if "normalize" in histConfig and histConfig['normalize']:
@@ -175,7 +179,7 @@ def plotManyHistsOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
         all are passed to drawStandardCaptions. histConfig arguments override these
     cuts: additional cuts per file concat to histConfig cuts, default ""
   histConfig options:
-    name: (unused)
+    name: name of histogram, used only in printIntegral
     title: title of histogram, used for legend
     color: sets line/marker color of histogram
     xtitle: x axis title, the first one found in the list is used
@@ -195,6 +199,8 @@ def plotManyHistsOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
         scaleFactor)
     normalize: if True normalize histogram (after normToBinWidth)
     integral: if True, makes each bin content Nevents for X >= bin low edge
+    printIntegral: if True, prints integral of histogram i.e. events that 
+        pass cuts * scale factor
   """
   
   for fileConfig in fileConfigs:
@@ -285,6 +291,11 @@ def plotManyHistsOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
       scaleFactor = 1.
       if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
       hist.Scale(scaleFactor)
+      if "printIntegral" in histConfig and histConfig["printIntegral"]:
+        histName = ""
+        if "name" in histConfig:
+          histName = histConfig["name"]
+        print "Integral: {2} for hist: '{0}' file: '{1}'".format(histName, fileConfig["name"], getIntegralAll(hist))
       if "normToBinWidth" in histConfig and histConfig["normToBinWidth"]:
         normToBinWidth(hist)
       if "normalize" in histConfig and histConfig['normalize']:
@@ -358,8 +369,10 @@ def plotOneHistOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outS
     integral: if True, makes each bin content Nevents for X >= bin low edge.
         For 2D plots, makes each bin content Nevents for X >= and Y >= 
         their low bin edges.
-    title: (unused)
     addFriend: add friend tree to main tree. Should be a length 2 list [treename,filename]
+    printIntegral: if True, prints integral of histogram i.e. events that 
+        pass cuts * scale factor
+    title: (unused)
   """
   
   for fileConfig in fileConfigs:
@@ -438,6 +451,8 @@ def plotOneHistOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outS
       scaleFactor = 1.
       if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
       hist.Scale(scaleFactor)
+      if "printIntegral" in histConfig and histConfig["printIntegral"]:
+        print "Integral: {2} for hist: '{0}' file: '{1}'".format(histConfig["name"], fileConfig["name"], getIntegralAll(hist))
       if "normToBinWidth" in histConfig and histConfig["normToBinWidth"]:
         normToBinWidth(hist)
       if "normalize" in histConfig and histConfig['normalize']:

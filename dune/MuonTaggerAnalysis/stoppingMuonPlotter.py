@@ -137,49 +137,95 @@ def estimatePerSrForVerticalAndEgt1GeV(tree,nmax=10000000000):
 
 if __name__ == "__main__":
   c = root.TCanvas()
+  treeName = "muontaggertreemaker/tree"
+  scaleFactor = 1.#/nEvents*8.*166.
+
   f = root.TFile("/pnfs/dune/persistent/users/jhugon/v06_05_00/g4/muontaggertree_v1/anahist.root")
-  
   tree = f.Get("muontaggertreemaker/tree")
   nEvents = tree.GetEntries()
   print "tree nEntries: ", nEvents
-  scaleFactor = 1.#/nEvents*8.*166.
-  #tree.Print()
-  
-  #for iEvent in range(tree.GetEntries()):
-  #for iEvent in range(100):
-  #  tree.GetEntry(iEvent)
-  #  if tree.inWideTPCe:
-  #    print tree.xe, tree.ye, tree.ze, tree.pe
-  #tree.Scan("numberTrajectoryPoints")
-
   print estimatePerSrForVerticalAndEgt1GeV(tree)
 
-  plotVariable1D(tree,c,"xb",100,-1000,1000,"Muon Starting x [cm]","Events/bin","Start_x.png",cuts="")
-  plotVariable1D(tree,c,"yb",50,0,1000,"Muon Starting y [cm]","Events/bin","Start_y.png",cuts="")
-  plotVariable1D(tree,c,"zb",100,-200,1000,"Muon Starting z [cm]","Events/bin","Start_z.png",cuts="")
-  #plotVariable2D(tree,c,"yb:xb",40,-400,400,40,0,800,"Muon Starting x [cm]","Muon Starting y [cm]","Start_yVx.png",cuts="")
-  #plotVariable2D(tree,c,"zb:yb",40,0,800,35,-10,690,"Muon Starting y [cm]","Muon Starting z [cm]","Start_zVy.png",cuts="")
-  plotVariable2D(tree,c,"zb:xb",30,-600,600,30,-200,1000,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx.png",cuts="")
-  plotVariable2D(tree,c,"zb:xb",15,-600,600,15,-200,1000,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx_cuts.png",cuts="thetazenithb > pi*170/180",caption="#theta_{zenith} > 170 deg")
-  plotVariable2D(tree,c,"zb:xb",15,-600,600,15,-200,1000,"Muon Starting x [cm]","Muon Starting z [cm]","Start_zVx_cuts2.png",cuts="thetazenithb > pi*178/180",caption="#theta_{zenith} > 178 deg")
+  ################################################################
 
-  plotVariable2D(tree,c,"ye:xe",15,-600,600,12,0,608,"Stopping Muon x [cm]","Stopping Muon y [cm]","Stop_yVx.png",cuts="inWideTPCe && pe<0.01")
-  plotVariable2D(tree,c,"ye:ze",15,-200,1000,12,0,608,"Stopping Muon z [cm]","Stopping Muon y [cm]","Stop_yVz.png",cuts="inWideTPCe && pe<0.01")
-  plotVariable2D(tree,c,"ze:xe",15,-600,600,15,-200,1000,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx.png",cuts="inWideTPCe && pe<0.01")
+  fileConfigs = [
+    {
+      "fn": "/pnfs/dune/persistent/users/jhugon/v06_05_00/g4/muontaggertree_v1/anahist.root",
+      "name": "stoppingMuons",
+    },
+  ]
+  histConfigs = [
+    {
+      "name":   "Start_x",
+      "var":    "xb",
+      "binning":[100,-1000,1000],
+      "xtitle": "Muon Starting x [cm]",
+      "ytitle": "Events/bin",
+      "cuts":   "",
+    },
+    {
+      "name":   "Start_y",
+      "var":    "yb",
+      "binning":[50,0,1000],
+      "xtitle": "Muon Starting y [cm]",
+      "ytitle": "Events/bin",
+      "cuts":   "",
+    },
+    {
+      "name":   "Start_z",
+      "var":    "zb",
+      "binning":[100,-200,1000],
+      "xtitle": "Muon Starting z [cm]",
+      "ytitle": "Events/bin",
+      "cuts":   "",
+    },
+    {
+      "name":   "Start_zVx",
+      "var":    "zb:xb",
+      "binning":[20,-500,500,30,-200,1000],
+      "xtitle": "Muon Starting x [cm]",
+      "ytitle": "Muon Starting z [cm]",
+      "cuts":   "",
+    },
+    {
+      "name":   "Start_zVx_thetagt170",
+      "var":    "zb:xb",
+      "binning":[20,-500,500,30,-200,1000],
+      "xtitle": "Muon Starting x [cm]",
+      "ytitle": "Muon Starting z [cm]",
+      "cuts":   "thetazenithb > pi*170/180",
+      "caption":"#theta_{zenith} > 170 deg",
+    },
+    {
+      "name":   "Stop_y",
+      "var":    "ye",
+      "binning":[32,0,608],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping muon rate density [Hz m^{-3}]",
+      "cuts":   "inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactor,
+      "printIntegral": True,
+    },
+    {
+      "name":   "Stop_y_ally",
+      "var":    "ye",
+      "binning":[75,-500,1000],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping muon rate density [Hz m^{-3}]",
+      "cuts":   "pe<0.01",
+      "scaleFactor": scaleFactor,
+    },
+    {
+      "name":   "Stop_yVpb_ally",
+      "var":    "ye:pb",
+      "binning":[20,0.,4,30,-500,1000],
+      "xtitle": "Initial Muon Momentum [GeV/c]",
+      "ytitle": "Muon stopping y [cm]",
+      "cuts":   "pe<0.01",
+    },
+  ]
 
-  #plotVariable2D(tree,c,"ze:xe",40,-400,400,35,-10,690,"Stopping Muon x [cm]","Stopping Muon z [cm]","Stop_zVx_cuts.png",cuts="inWideTPCe && pe<0.01 && xb < 200 & xb > 0 && zb < 200 && zb > 0",caption="Muon Starting 0<x<200 cm and 0<z<200cm")
-
-  plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",30,-200,1000,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
-
-  stop_y_hist = plotVariable1D(tree,c,"ye",32,0,608,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01",scaleFactor=scaleFactor)
-  print "stop_y_hist integral: {0}".format(stop_y_hist.Integral())
-  stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_ally.png",cuts="pe<0.01",scaleFactor=scaleFactor)
-  print "stop_ally_hist integral: {0}".format(stop_ally_hist.Integral())
-  plotVariable1D(tree,c,"ye",10,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_mosty.png",cuts="pe<0.01",scaleFactor=scaleFactor)
-  plotVariable1D(tree,c,"ye",100,0,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_mostyfine.png",cuts="pe<0.01",scaleFactor=scaleFactor)
-
-  #plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125")
-  plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01")
+  plotOneHistOnePlot(fileConfigs,histConfigs,c,treeName)
 
 #  #tree.Scan("xb:yb:zb:180-thetazenithb*180/pi")
 #
