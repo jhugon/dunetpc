@@ -3,285 +3,92 @@
 import random
 import ROOT as root
 from helpers import *
-from trajectoryPlotter import plotVariable2D
 root.gROOT.SetBatch(True)
 
-f = root.TFile("MuonTaggerTree.root")
+def makeLineXY(xb,yb,pxb,pyb,minx=-1000,maxx=1000,miny=-1000,maxy=1000):
+    x1 = minx
+    x2 = maxx
+    m = pyb/pxb
+    b = yb - m * xb
+    y1 = m*x1+b
+    y2 = m*x2+b
+    #if y1 > maxy or y1 < maxx or y2 > maxy or y2 < maxy:
+    #  y1 = miny
+    #  y2 = maxy
+    #  x1 = (y1 - b) / m
+    #  x2 = (y2 - b) / m
+    if y1 < miny:
+      y1 = miny
+      x1 = (y1 - b) / m
+    if y1 > miny:
+      y1 = maxy
+      x1 = (y1 - b) / m
+    if y2 < miny:
+      y2 = miny
+      x2 = (y2 - b) / m
+    if y2 > miny:
+      y2 = maxy
+      x2 = (y2 - b) / m
+    line = root.TLine(x1,y1,x2,y2)
+    line.SetLineWidth(1)
+    return line
 
-tree = f.Get("muontaggertreemaker/tree")
-#tree.Print()
+def projectToYPlane(tree,y=600.):
+    mx = tree.pxb/tree.pyb
+    mz = tree.pzb/tree.pyb
+    bx = tree.xb - mx*tree.yb
+    bz = tree.zb - mz*tree.yb
+    x = mx*y + tree.xb
+    z = mz*y + tree.zb
+    return x, z
 
 c = root.TCanvas()
+f = root.TFile("/pnfs/dune/persistent/users/jhugon/v06_05_00/g4/muontaggertree_v1/anahist.root")
 
-def plotVariable(tree,canvas,variable,nBins,xMin,xMax,xlabel,ylabel,saveName,histConfigs,drawopt="SAME",logx=False,logy=False):
-  if logx:
-    canvas.SetLogx()
-  else:
-    canvas.SetLogx(False)
-  if logy:
-    canvas.SetLogy()
-  else:
-    canvas.SetLogy(False)
-  hists = []
-  binningString = "{0:d},{1:f},{2:f}".format(nBins,xMin,xMax)
-  for histConfig in histConfigs:
-    name = "hist"+str(random.getrandbits(36))
-    tree.Draw(variable+" >> "+name+"("+binningString+")",histConfig['cuts'])
-    tmpHist = root.gPad.GetPrimitive(name)
-    tmpHist.SetLineColor(histConfig['color'])
-    tmpHist.SetTitle("")
-    tmpHist.SetLineWidth(1)
-    tmpHist.SetMarkerSize(1.2)
-    hists.append(tmpHist)
-  ymax = 1.5*max([getHistMax(x) for x in hists])
-  ymin = 0.
-  if logy:
-    ymin = 0.1
-  axisHist = root.TH2F("axisHist1"+str(random.getrandbits(36)),"",1,xMin,xMax,1,ymin,ymax)
-  hists.append(axisHist)
-  setHistTitles(axisHist,xlabel,ylabel)
-  axisHist.Draw()
-  for hist in hists:
-    hist.Draw(drawopt)
-  canvas.SaveAs(saveName)
-  return hists
+tree = f.Get("muontaggertreemaker/tree")
 
-#hists = plotVariable(tree,c,"thetazenithb/TMath::Pi()*180.",50,0.,180.,"#theta_{zenith} [#circ]","Events/bin","thetazenithb.png",[
-#  #{
-#  #  "title":"p #leq 1 GeV/c",
-#  #  "cuts":"pb <= 1.",
-#  #  "color":root.kBlack,
-#  #},
-#  #{
-#  #  "title":"1 GeV/c < p < 3 GeV/c",
-#  #  "cuts":"pb > 1. && pb < 3.",
-#  #  "color":root.kRed,
-#  #},
-#  #{
-#  #  "title":"p \geq 3 GeV/c",
-#  #  "cuts":"pb >= 3.",
-#  #  "color":root.kGreen,
-#  #},
-#  {
-#    "title":"All",
-#    "cuts":"",
-#    "color":root.kBlack,
-#  },
-#  {
-#    "title":"Hit Front Det",
-#    "cuts":"hitsFrontDet",
-#    "color":root.kGreen,
-#  },
-#  {
-#    "title":"Hit Back Det",
-#    "cuts":"hitsBackDet",
-#    "color":root.kRed,
-#  },
-#  {
-#    "title":"Hit Both Det",
-#    "cuts":"hitsFrontDet && hitsBackDet",
-#    "color":root.kBlue,
-#  },
-#])
-#
-#hists = plotVariable(tree,c,"thetab/TMath::Pi()*180.",50,0.,180.,"#theta_{z} [#circ]","Events/bin","thetab.png",[
-#  #{
-#  #  "title":"p #leq 1 GeV/c",
-#  #  "cuts":"pb <= 1.",
-#  #  "color":root.kBlack,
-#  #},
-#  #{
-#  #  "title":"1 GeV/c < p < 3 GeV/c",
-#  #  "cuts":"pb > 1. && pb < 3.",
-#  #  "color":root.kRed,
-#  #},
-#  #{
-#  #  "title":"p \geq 3 GeV/c",
-#  #  "cuts":"pb >= 3.",
-#  #  "color":root.kGreen,
-#  #},
-#  {
-#    "title":"All",
-#    "cuts":"",
-#    "color":root.kBlack,
-#  },
-#  {
-#    "title":"Hit Front Det",
-#    "cuts":"hitsFrontDet",
-#    "color":root.kGreen,
-#  },
-#  {
-#    "title":"Hit Back Det",
-#    "cuts":"hitsBackDet",
-#    "color":root.kRed,
-#  },
-#  {
-#    "title":"Hit Both Det",
-#    "cuts":"hitsFrontDet && hitsBackDet",
-#    "color":root.kBlue,
-#  },
-#])
-#
-#hists = plotVariable(tree,c,"phizenithb/TMath::Pi()*180.",50,-180.,180,"#phi_{Zenith} [#circ] ","Events/bin","phizenithb.png",[
-#  {
-#    "title":"All",
-#    "cuts":"",
-#    "color":root.kBlack,
-#  },
-#  {
-#    "title":"Hit Front Det",
-#    "cuts":"hitsFrontDet",
-#    "color":root.kGreen,
-#  },
-#  {
-#    "title":"Hit Back Det",
-#    "cuts":"hitsBackDet",
-#    "color":root.kRed,
-#  },
-#  {
-#    "title":"Hit Both Det",
-#    "cuts":"hitsFrontDet && hitsBackDet",
-#    "color":root.kBlue,
-#  },
-#])
-#
-#hists = plotVariable(tree,c,"phib/TMath::Pi()*180.",50,-180,180,"#phi_{z} [#circ]","Events/bin","phib.png",[
-#  {
-#    "title":"All",
-#    "cuts":"",
-#    "color":root.kBlack,
-#  },
-#  {
-#    "title":"Hit Front Det",
-#    "cuts":"hitsFrontDet",
-#    "color":root.kGreen,
-#  },
-#  {
-#    "title":"Hit Back Det",
-#    "cuts":"hitsBackDet",
-#    "color":root.kRed,
-#  },
-#  {
-#    "title":"Hit Both Det",
-#    "cuts":"hitsFrontDet && hitsBackDet",
-#    "color":root.kBlue,
-#  },
-#])
-#
-#hists = plotVariable(tree,c,"pb",50,0.,100,"p [GeV/c]","Events/bin","momentum.png",[
-#  {
-#    "title":"All",
-#    "cuts":"",
-#    "color":root.kBlack,
-#  },
-#  {
-#    "title":"Hit Front Det",
-#    "cuts":"hitsFrontDet",
-#    "color":root.kGreen,
-#  },
-#  {
-#    "title":"Hit Back Det",
-#    "cuts":"hitsBackDet",
-#    "color":root.kRed,
-#  },
-#  {
-#    "title":"Hit Both Det",
-#    "cuts":"hitsFrontDet && hitsBackDet",
-#    "color":root.kBlue,
-#  },
-#],logy=True)
+maxEvents = 1000000
+nEvents = min(maxEvents,tree.GetEntries())
 
-plotVariable2D(tree,c,"xb:yb",1000,-4000.,4000.,1000,-5000,5000,"MuonProduction y [cm]","Muon Production x [cm]","xbVyb.png",cuts="")
-plotVariable2D(tree,c,"xb:zb",1000,-4000.,4000.,1000,-5000,5000,"MuonProduction y [cm]","Muon Production x [cm]","zbVxb.png",cuts="")
-plotVariable2D(tree,c,"yb:zb",1000,-4000.,4000.,1000,-5000,5000,"MuonProduction y [cm]","Muon Production x [cm]","zbVyb.png",cuts="")
-c.Clear()
-hists = plotVariable(tree,c,"xb",500,-1000.,-1000,"Muon Production x [cm]","Events/bin","xb.png",[
-  {
-    "title":"All",
-    "cuts":"",
-    "color":root.kBlack,
-  },
-  {
-    "title":"Hit Front Det",
-    "cuts":"hitsFrontDet",
-    "color":root.kGreen,
-  },
-  {
-    "title":"Hit Back Det",
-    "cuts":"hitsBackDet",
-    "color":root.kRed,
-  },
-  {
-    "title":"Hit Both Det",
-    "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kBlue,
-  },
-],logy=False)
-hists = plotVariable(tree,c,"yb",500,-3000,3000,"Muon Production y [cm]","Events/bin","yb.png",[
-  {
-    "title":"All",
-    "cuts":"",
-    "color":root.kBlack,
-  },
-  {
-    "title":"Hit Front Det",
-    "cuts":"hitsFrontDet",
-    "color":root.kGreen,
-  },
-  {
-    "title":"Hit Back Det",
-    "cuts":"hitsBackDet",
-    "color":root.kRed,
-  },
-  {
-    "title":"Hit Both Det",
-    "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kBlue,
-  },
-],logy=False)
-hists = plotVariable(tree,c,"zb",500,-1000,1000,"Muon Production z [cm]","Events/bin","zb.png",[
-  {
-    "title":"All",
-    "cuts":"",
-    "color":root.kBlack,
-  },
-  {
-    "title":"Hit Front Det",
-    "cuts":"hitsFrontDet",
-    "color":root.kGreen,
-  },
-  {
-    "title":"Hit Back Det",
-    "cuts":"hitsBackDet",
-    "color":root.kRed,
-  },
-  {
-    "title":"Hit Both Det",
-    "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kBlue,
-  },
-],logy=False)
+axisHistXY = Hist2D(1,-1000,1000,1,-1000,1000)
+histXZ600 = Hist2D(100,-500,500,100,-200,800)
+histXY = Hist2D(50,-500,500,10,-1000,1000)
+histZY = Hist2D(60,-200,1000,10,-1000,1000)
+linesXY = []
+for iEvent in range(nEvents):
+  tree.GetEntry(iEvent)
+  line = makeLineXY(tree.xb,tree.yb,tree.pxb,tree.pyb)
+  linesXY.append(line)
 
-hists = plotVariable(tree,c,"tb",5000,-1,1,"Muon Production t [s]","Events/bin","tb.png",[
-  {
-    "title":"All",
-    "cuts":"",
-    "color":root.kBlack,
-  },
-  {
-    "title":"Hit Front Det",
-    "cuts":"hitsFrontDet",
-    "color":root.kGreen,
-  },
-  {
-    "title":"Hit Back Det",
-    "cuts":"hitsBackDet",
-    "color":root.kRed,
-  },
-  {
-    "title":"Hit Both Det",
-    "cuts":"hitsFrontDet && hitsBackDet",
-    "color":root.kBlue,
-  },
-],logy=False)
+  x,z = projectToYPlane(tree,600.)
+  if tree.thetazenithb > math.pi*160/180.:
+    histXZ600.Fill(x,z)
+
+  for i in range(1,histXY.GetYaxis().GetNbins()+1):
+    y = histXY.GetYaxis().GetBinCenter(i)
+    x, z = projectToYPlane(tree,y)
+    histXY.Fill(x,y)
+    histZY.Fill(z,y)
+
+axisHistXY.Draw()
+setHistTitles(axisHistXY,"Generator muon x [cm]", "Generator muon y [cm]")
+for line in linesXY:
+  line.Draw()
+c.SaveAs("test1.png")
+  
+setupCOLZFrame(c)
+setHistTitles(histXZ600,"Generator muon x [cm]", "Generator muon z [cm]")
+histXZ600.Draw("colz")
+c.SaveAs("test2.png")
+  
+setHistTitles(histXY,"Generator muon x [cm]", "Generator muon y [cm]")
+histXY.Draw("colz")
+c.SaveAs("test3.png")
+
+setHistTitles(histZY,"Generator muon z [cm]", "Generator muon y [cm]")
+histZY.Draw("colz")
+c.SaveAs("test4.png")
+
+
+
 

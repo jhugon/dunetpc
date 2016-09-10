@@ -142,7 +142,7 @@ if __name__ == "__main__":
   tree = f.Get("muontaggertreemaker/tree")
   nEvents = tree.GetEntries()
   print "tree nEntries: ", nEvents
-  scaleFactor = 1./nEvents*8.*166.
+  scaleFactor = 1.#/nEvents*8.*166.
   #tree.Print()
   
   #for iEvent in range(tree.GetEntries()):
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
   plotVariable2D(tree,c,"180-thetazenithb*180/pi:zb",30,-200,1000,45,0,90,"Stopping Muon x [cm]","Muon #theta_{zenith} [deg]","thetazVz.png",cuts="")
 
-  stop_y_hist = plotVariable1D(tree,c,"ye",6,0,608,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01",scaleFactor=scaleFactor)
+  stop_y_hist = plotVariable1D(tree,c,"ye",32,0,608,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_y.pdf",cuts="inWideTPCe && pe<0.01",scaleFactor=scaleFactor)
   print "stop_y_hist integral: {0}".format(stop_y_hist.Integral())
   stop_ally_hist = plotVariable1D(tree,c,"ye",22,-1200,1000,"Muon Stopping y [cm]","Stopping Muon Rate/bin [Hz]","Stop_ally.png",cuts="pe<0.01",scaleFactor=scaleFactor)
   print "stop_ally_hist integral: {0}".format(stop_ally_hist.Integral())
@@ -181,9 +181,9 @@ if __name__ == "__main__":
   #plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01 && xe > 50 && xe < 150 && ze > 25 && ze < 125")
   plotVariable2D(tree,c,"ye:pb",40,0.,10,10,0,1000,"Initial Muon Momentum [GeV/c]","Stopping Muon y [cm]","stop_mostyVpb.png",cuts="pe<0.01")
 
-  #tree.Scan("xb:yb:zb:180-thetazenithb*180/pi")
-
-#  f2 = root.TFile("MuonTaggerTree_10k.root")
+#  #tree.Scan("xb:yb:zb:180-thetazenithb*180/pi")
+#
+#  f2 = root.TFile("/scratch/dune/jhugon/mergentuple_51975_13681/anahist.root")
 #  tree2 = f2.Get("muontaggertreemaker/tree")
 #  trajXY = f2.Get("muontaggertreemaker/trajectoryXY")
 #  trajZY = f2.Get("muontaggertreemaker/trajectoryZY")
@@ -192,11 +192,11 @@ if __name__ == "__main__":
 #  trajXY.UseCurrentStyle()
 #  trajZY.UseCurrentStyle()
 #  trajXZ.UseCurrentStyle()
-#  trajXY.GetXaxis().SetRangeUser(-200,400)
+#  trajXY.GetXaxis().SetRangeUser(-500,500)
 #  trajXY.GetYaxis().SetRangeUser(-500,1000)
-#  trajXZ.GetXaxis().SetRangeUser(-200,400)
-#  trajXZ.GetYaxis().SetRangeUser(-200,400)
-#  trajZY.GetXaxis().SetRangeUser(-200,400)
+#  trajXZ.GetXaxis().SetRangeUser(-500,500)
+#  trajXZ.GetYaxis().SetRangeUser(-200,1000)
+#  trajZY.GetXaxis().SetRangeUser(-200,1000)
 #  trajZY.GetYaxis().SetRangeUser(-500,1000)
 #  setHistTitles(trajXY,"Trajectory point x [cm]","Trajectory point y [cm]")
 #  setHistTitles(trajZY,"Trajectory point z [cm]","Trajectory point y [cm]")
@@ -207,10 +207,11 @@ if __name__ == "__main__":
 #  c.SaveAs("trajZY.png")
 #  trajXZ.Draw("colz")
 #  c.SaveAs("trajXZ.png")
-
-#  #plotVariable2D(tree2,c,"trajy:trajx",100,-200,400,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_tree.png",cuts="")
-#  plotVariable2D(tree2,c,"trajy:trajx",100,-200,400,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts1.png",cuts="thetazenithb < pi*150/180",caption="#theta_{zenith} < 150 deg")
-#  plotVariable2D(tree2,c,"trajy:trajx",100,-200,400,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts2.png",cuts="xb < 200 & xb > 0 && zb < 200 && zb > 0",caption="Muon Starting 0<x<200 cm and 0<z<200cm")
-#  plotVariable2D(tree2,c,"trajy:trajx",100,-200,400,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts3.png",cuts="!(xb < 200 & xb > 0 && zb < 200 && zb > 0)",caption="Muon Not Starting in 0<x<200 cm and 0<z<200cm")
-#  plotVariable2D(tree2,c,"trajy:trajx",100,-200,400,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts4.png",cuts="inWideTPCe && pe<0.01 ",caption="Stopping Muons in TPC")
-
+#
+#  plotVariable2D(tree2,c,"trajy:trajx",100,-500,500,150,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_tree.png",cuts="")
+#  plotVariable2D(tree2,c,"trajy:trajz",120,-200,1000,150,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajZY_tree.png",cuts="")
+#  plotVariable2D(tree2,c,"trajy:trajx",100,-500,500,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts1.png",cuts="thetazenithb < pi*150/180",caption="#theta_{zenith} < 150 deg")
+#  #plotVariable2D(tree2,c,"trajy:trajx",100,-500,500,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts2.png",cuts="xb < 200 & xb > 0 && zb < 200 && zb > 0",caption="Muon Starting 0<x<200 cm and 0<z<200cm")
+#  #plotVariable2D(tree2,c,"trajy:trajx",100,-500,500,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts3.png",cuts="!(xb < 200 & xb > 0 && zb < 200 && zb > 0)",caption="Muon Not Starting in 0<x<200 cm and 0<z<200cm")
+#  #plotVariable2D(tree2,c,"trajy:trajx",100,-500,500,100,-500,1000,"Trajectory point x [cm]","Trajectory point y [cm]","trajXY_cuts4.png",cuts="inWideTPCe && pe<0.01 ",caption="Stopping Muons in TPC")
+#
