@@ -15,37 +15,60 @@ TFile**     MuonTaggerTree.root
 root [4] tree.Print()
 ******************************************************************************
 *Tree    :tree      : tree                                                   *
-*        :          : Tree compression factor =   1.28                       *
+*        :          : Tree compression factor =   1.52                       *
 ******************************************************************************
-*Br    0 :xb        : xb/F                                                   *
-*Br    1 :yb        : yb/F                                                   *
-*Br    2 :zb        : zb/F                                                   *
-*Br    3 :tb        : tb/F                                                   *
-*Br    4 :xe        : xe/F                                                   *
-*Br    5 :ye        : ye/F                                                   *
-*Br    6 :ze        : ze/F                                                   *
-*Br    7 :te        : te/F                                                   *
-*Br    8 :pxb       : pxb/F                                                  *
-*Br    9 :pyb       : pyb/F                                                  *
-*Br   10 :pzb       : pzb/F                                                  *
-*Br   11 :pEb       : pEb/F                                                  *
-*Br   12 :pxe       : pxe/F                                                  *
-*Br   13 :pye       : pye/F                                                  *
-*Br   14 :pze       : pze/F                                                  *
-*Br   15 :pEe       : pEe/F                                                  *
-*Br   16 :pb        : pb/F                                                   *
-*Br   17 :pe        : pe/F                                                   *
-*Br   18 :thetab    : thetab/F                                               *
-*Br   19 :costhetab : costhetab/F                                            *
-*Br   20 :phib      : phib/F                                                 *
-*Br   21 :thetazenithb : thetazenithb/F                                      *
-*Br   22 :costhetazenithb : costhetazenithb/F                                *
-*Br   23 :phizenithb : phizenithb/F                                          *
-*Br   24 :inTPCe    : inTPCe/O                                               *
-*Br   25 :inWideTPCe : inWideTPCe/O                                          *
-*Br   26 :numberTrajectoryPoints : numberTrajectoryPoints/I                  *
-*Br   27 :hitsFrontDet : hitsFrontDet/O                                      *
-*Br   28 :hitsBackDet : hitsBackDet/O                                        *
+*Br    0 :event     : event/i                                                *
+*Br    1 :subrun    : subrun/i                                               *
+*Br    2 :run       : run/i                                                  *
+*Br    3 :pdg       : pdg/I                                                  *
+*Br    4 :xb        : xb/F                                                   *
+*Br    5 :yb        : yb/F                                                   *
+*Br    6 :zb        : zb/F                                                   *
+*Br    7 :tb        : tb/F                                                   *
+*Br    8 :xe        : xe/F                                                   *
+*Br    9 :ye        : ye/F                                                   *
+*Br   10 :ze        : ze/F                                                   *
+*Br   11 :te        : te/F                                                   *
+*Br   12 :pxb       : pxb/F                                                  *
+*Br   13 :pyb       : pyb/F                                                  *
+*Br   14 :pzb       : pzb/F                                                  *
+*Br   15 :pEb       : pEb/F                                                  *
+*Br   16 :pxe       : pxe/F                                                  *
+*Br   17 :pye       : pye/F                                                  *
+*Br   18 :pze       : pze/F                                                  *
+*Br   19 :pEe       : pEe/F                                                  *
+*Br   20 :pb        : pb/F                                                   *
+*Br   21 :pe        : pe/F                                                   *
+*Br   22 :thetab    : thetab/F                                               *
+*Br   23 :costhetab : costhetab/F                                            *
+*Br   24 :phib      : phib/F                                                 *
+*Br   25 :thetazenithb : thetazenithb/F                                      *
+*Br   26 :costhetazenithb : costhetazenithb/F                                *
+*Br   27 :phizenithb : phizenithb/F                                          *
+*Br   28 :inTPCe    : inTPCe/O                                               *
+*Br   29 :inWideTPCe : inWideTPCe/O                                          *
+*Br   30 :rangeInWideTPC : rangeInWideTPC/F                                  *
+*Br   31 :numberTrajectoryPoints : numberTrajectoryPoints/I                  *
+*Br   32 :trajx     : vector<float>                                          *
+*Br   33 :trajy     : vector<float>                                          *
+*Br   34 :trajz     : vector<float>                                          *
+*Br   35 :trajt     : vector<float>                                          *
+*Br   36 :trajp     : vector<float>                                          *
+*Br   37 :trajE     : vector<float>                                          *
+*Br   38 :trajdEdx  : vector<float>                                          *
+*Br   39 :trajInTPC : vector<bool>                                           *
+*Br   40 :trajInWideTPC : vector<bool>                                       *
+*Br   41 :trajDistToLine : vector<float>                                     *
+*Br   42 :hitsFrontDet : hitsFrontDet/O                                      *
+*Br   43 :hitsBackDet : hitsBackDet/O                                        *
+*Br   44 :frontDetHitX : frontDetHitX/F                                      *
+*Br   45 :frontDetHitY : frontDetHitY/F                                      *
+*Br   46 :frontDetHitZ : frontDetHitZ/F                                      *
+*Br   47 :frontDetHitT : frontDetHitT/F                                      *
+*Br   48 :backDetHitX : backDetHitX/F                                        *
+*Br   49 :backDetHitY : backDetHitY/F                                        *
+*Br   50 :backDetHitZ : backDetHitZ/F                                        *
+*Br   51 :backDetHitT : backDetHitT/F                                        *
 
 """
 
@@ -53,33 +76,6 @@ import random
 import ROOT as root
 from helpers import *
 root.gROOT.SetBatch(True)
-
-def plotVariable1D(tree,canvas,variable,nBinsX,xMin,xMax,xlabel,ylabel,saveName,cuts="",drawopt="",logx=False,logy=False,caption="",captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString="",scaleFactor=1.):
-  if logx:
-    canvas.SetLogx()
-  else:
-    canvas.SetLogx(False)
-  if logy:
-    canvas.SetLogy()
-  else:
-    canvas.SetLogy(False)
-  binningString = "{0:d},{1:f},{2:f}".format(nBinsX,xMin,xMax)
-  name = "hist"+str(random.getrandbits(36))
-  tree.Draw(variable+" >> "+name+"("+binningString+")",cuts,drawopt)
-  hist = root.gPad.GetPrimitive(name)
-  hist.Scale(scaleFactor)
-  hist.UseCurrentStyle()
-  hist.SetTitle("")
-  setHistTitles(hist,xlabel,ylabel)
-  drawStandardCaptions(canvas,caption,captionleft1,captionleft2,captionleft3,captionright1,captionright2,captionright3,preliminaryString)
-  canvas.SaveAs(saveName)
-  #canvas.SaveAs(saveName+".C")
-  #canvas.SaveAs(saveName+".root")
-  #outfile = root.TFile(saveName+".root","RECREATE")
-  #outfile.cd()
-  #hist.Write()
-  #outfile.Close()
-  return hist
 
 def plotVariable2D(tree,canvas,variable,nBinsX,xMin,xMax,nBinsY,yMin,yMax,xlabel,ylabel,saveName,cuts="",drawopt="COLZ",logx=False,logy=False,caption="",captionleft1="",captionleft2="",captionleft3="",captionright1="",captionright2="",captionright3="",preliminaryString=""):
   """
@@ -135,22 +131,39 @@ def estimatePerSrForVerticalAndEgt1GeV(tree,nmax=10000000000):
    normalizationUnc = fitResult.ParError(0)
    return normalization, normalizationUnc
 
+def getNUniqueEvents(tree,nmax=10000000000):
+   events = set()
+   nEntries = min(tree.GetEntries(),nmax)
+   for iEntry in range(nEntries):
+     tree.GetEntry(iEntry)
+     uniqueid = "{}{}{}".format(tree.run,tree.subrun,tree.event)
+     if not uniqueid in events:
+        events.add(uniqueid)
+   return len(events)
+
 if __name__ == "__main__":
   c = root.TCanvas()
   treeName = "muontaggertreemaker/tree"
-  scaleFactor = 1.#/nEvents*8.*166.
 
-  f = root.TFile("/pnfs/dune/persistent/users/jhugon/v06_05_00/g4/muontaggertree_v1/anahist.root")
+  f = root.TFile("/pnfs/dune/scratch/users/jhugon/v06_05_00/muontaggertree/muontaggertree_v4/anahist.root")
+  #f = root.TFile("/pnfs/dune/scratch/users/jhugon/v06_05_00/muontaggertree/muontaggertree_v4/10431460_1/MuonTaggerTree.root")
   tree = f.Get("muontaggertreemaker/tree")
-  nEvents = tree.GetEntries()
-  print "tree nEntries: ", nEvents
+  nEntries = tree.GetEntries()
+  print "tree nEntries: ", nEntries
   print estimatePerSrForVerticalAndEgt1GeV(tree)
+  #nEvents = getNUniqueEvents(tree)
+  nEvents = 4200
+  print "tree nEvents: ", nEvents
 
   ################################################################
 
+  scaleFactorPerEvent = 1./nEvents
+  scaleFactorHz = 1./nEvents * 6.45e-3
+
   fileConfigs = [
     {
-      "fn": "/pnfs/dune/persistent/users/jhugon/v06_05_00/g4/muontaggertree_v1/anahist.root",
+      "fn": "/pnfs/dune/scratch/users/jhugon/v06_05_00/muontaggertree/muontaggertree_v4/anahist.root",
+      #"fn":"/pnfs/dune/scratch/users/jhugon/v06_05_00/muontaggertree/muontaggertree_v4/10431460_1/MuonTaggerTree.root",
       "name": "stoppingMuons",
     },
   ]
@@ -201,9 +214,10 @@ if __name__ == "__main__":
       "var":    "ye",
       "binning":[32,0,608],
       "xtitle": "Muon stopping y [cm]",
-      "ytitle": "Stopping muon rate density [Hz m^{-3}]",
-      "cuts":   "inWideTPCe && pe<0.01",
-      "scaleFactor": scaleFactor,
+      "ytitle": "Stopping #mu^{+} per y per event [cm^{-1}]",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactorPerEvent,
+      "normToBinWidth" : True,
       "printIntegral": True,
     },
     {
@@ -211,17 +225,97 @@ if __name__ == "__main__":
       "var":    "ye",
       "binning":[75,-500,1000],
       "xtitle": "Muon stopping y [cm]",
-      "ytitle": "Stopping muon rate density [Hz m^{-3}]",
-      "cuts":   "pe<0.01",
-      "scaleFactor": scaleFactor,
+      "ytitle": "Stopping #mu^{+} per y per event [cm^{-1}]",
+      "cuts":   "pdg== -13 && pe<0.01",
+      "scaleFactor": scaleFactorPerEvent,
+      "normToBinWidth" : True,
+    },
+    {
+      "name":   "Stop_y_rate",
+      "var":    "ye",
+      "binning":[32,0,608],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping #mu^{+} rate per y [Hz cm^{-1}]",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactorHz,
+      "normToBinWidth" : True,
+      "printIntegral": True,
+    },
+    {
+      "name":   "Stop_y_ally_rate",
+      "var":    "ye",
+      "binning":[75,-500,1000],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping #mu^{+} rate per y [Hz cm^{-1}]",
+      "cuts":   "pdg== -13 && pe<0.01",
+      "scaleFactor": scaleFactorHz,
+      "normToBinWidth" : True,
     },
     {
       "name":   "Stop_yVpb_ally",
       "var":    "ye:pb",
       "binning":[20,0.,4,30,-500,1000],
       "xtitle": "Initial Muon Momentum [GeV/c]",
-      "ytitle": "Muon stopping y [cm]",
-      "cuts":   "pe<0.01",
+      "ytitle": " #mu^{+} stopping y [cm]",
+      "cuts":   "pdg== -13 && pe<0.01",
+      "ztitle": "#mu^{+} / bin / event",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "Stop_rangeVy",
+      "var":    "rangeInWideTPC:ye",
+      "binning":[16,0,608,70,0,700.],
+      "xtitle": "#mu^{+} stopping y [cm]",
+      "ytitle": "#mu^{+} range in TPC [cm]",
+      "ztitle": "#mu^{+} / bin / event",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "Stop_yVrange",
+      "var":    "ye:rangeInWideTPC",
+      "binning":[70,0,700.,16,0,608],
+      "xtitle": "#mu^{+} range in TPC [cm]",
+      "ytitle": "#mu^{+} stopping y [cm]",
+      "ztitle": "#mu^{+} / bin / event",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "tb",
+      "var":    "tb*1.0e-6",
+      "binning":[1000,-4,4],
+      "xtitle": "Muon creation time [ms]",
+      "ytitle": "Muons/bin/event",
+      "cuts":   "",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "tb_early",
+      "var":    "tb*1.0e-6",
+      "binning":[1000,-4,-2],
+      "xtitle": "Muon creation time [ms]",
+      "ytitle": "Muons/bin/event",
+      "cuts":   "",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "tb_late",
+      "var":    "tb*1.0e-6",
+      "binning":[1000,2,4],
+      "xtitle": "Muon creation time [ms]",
+      "ytitle": "Muons/bin/event",
+      "cuts":   "",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "te",
+      "var":    "te*1.0e-6",
+      "binning":[1000,-4,4],
+      "xtitle": "Muon end time [ms]",
+      "ytitle": "Muons/bin/event",
+      "cuts":   "",
+      "scaleFactor": scaleFactorPerEvent,
     },
   ]
 

@@ -55,6 +55,7 @@ def plotManyFilesOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
     caption, captionleft1, captionleft2, captionleft3, captionright1,
         captionright2, captionright3, preliminaryString:
         all are passed to drawStandardCaptions
+    scaleFactor: scale histogram by this much after filling
     normToBinWidth: if True, normalize histogram to bin width (after applying
         scaleFactor)
     normalize: if True normalize histogram (after normToBinWidth)
@@ -125,7 +126,8 @@ def plotManyFilesOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
         thiscuts += fileConfig['cuts']
       tree.Draw(varAndHist,thiscuts,"",nMax)
       scaleFactor = 1.
-      if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
+      if "scaleFactor" in fileConfig: scaleFactor *= fileConfig['scaleFactor']
+      if "scaleFactor" in histConfig: scaleFactor *= histConfig['scaleFactor']
       hist.Scale(scaleFactor)
       if "printIntegral" in histConfig and histConfig["printIntegral"]:
         print "Integral: {2} for hist: '{0}' file: '{1}'".format(histConfig["name"], fileConfig["name"], getIntegralAll(hist))
@@ -195,6 +197,7 @@ def plotManyHistsOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
         captionright2, captionright3, preliminaryString:
         all are passed to drawStandardCaptions, first set of captions found is
         used
+    scaleFactor: scale histogram by this much after filling
     normToBinWidth: if True, normalize histogram to bin width (after applying
         scaleFactor)
     normalize: if True normalize histogram (after normToBinWidth)
@@ -289,7 +292,8 @@ def plotManyHistsOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",ou
       varAndHist = var + " >> " + hist.GetName()
       tree.Draw(varAndHist,thiscuts,"",nMax)
       scaleFactor = 1.
-      if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
+      if "scaleFactor" in fileConfig: scaleFactor *= fileConfig['scaleFactor']
+      if "scaleFactor" in histConfig: scaleFactor *= histConfig['scaleFactor']
       hist.Scale(scaleFactor)
       if "printIntegral" in histConfig and histConfig["printIntegral"]:
         histName = ""
@@ -363,6 +367,7 @@ def plotOneHistOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outS
     caption, captionleft1, captionleft2, captionleft3, captionright1,
         captionright2, captionright3, preliminaryString:
         all are passed to drawStandardCaptions
+    scaleFactor: scale histogram by this much after filling
     normToBinWidth: if True, normalize histogram to bin width (after applying
         scaleFactor)
     normalize: if True normalize histogram (after normToBinWidth)
@@ -449,7 +454,8 @@ def plotOneHistOnePlot(fileConfigs,histConfigs,canvas,treename,outPrefix="",outS
       varAndHist = var + " >> " + hist.GetName()
       tree.Draw(varAndHist,thiscuts,"",nMax)
       scaleFactor = 1.
-      if "scaleFactor" in fileConfig: scaleFactor = fileConfig['scaleFactor']
+      if "scaleFactor" in fileConfig: scaleFactor *= fileConfig['scaleFactor']
+      if "scaleFactor" in histConfig: scaleFactor *= histConfig['scaleFactor']
       hist.Scale(scaleFactor)
       if "printIntegral" in histConfig and histConfig["printIntegral"]:
         print "Integral: {2} for hist: '{0}' file: '{1}'".format(histConfig["name"], fileConfig["name"], getIntegralAll(hist))
