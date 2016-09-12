@@ -299,9 +299,10 @@ if __name__ == "__main__":
       "binning":[16,0,608,70,0,700.],
       "xtitle": "#mu^{+} stopping y [cm]",
       "ytitle": "#mu^{+} range in TPC [cm]",
-      "ztitle": "#mu^{+} / bin / event",
+      "ztitle": "Stopping #mu^{+} density / range / event [m^{-4}]",
       "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
-      "scaleFactor": scaleFactorPerEvent,
+      "normToBinWidth": True,
+      "scaleFactor": scaleFactorPerEvent*100./50.*100,
     },
     {
       "name":   "Stop_yVrange",
@@ -309,8 +310,29 @@ if __name__ == "__main__":
       "binning":[70,0,700.,16,0,608],
       "xtitle": "#mu^{+} range in TPC [cm]",
       "ytitle": "#mu^{+} stopping y [cm]",
+      "ztitle": "Stopping #mu^{+} density / range / event [m^{-4}]",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "normToBinWidth": True,
+      "scaleFactor": scaleFactorPerEvent*100./50.*100,
+    },
+    {
+      "name":   "pEbVrangeMup",
+      "var":    "rangeInWideTPC:pEb",
+      "binning":[40,0,5,40,0,700.],
+      "ytitle": "#mu^{+} range in TPC [cm]",
+      "xtitle": "Initial #mu^{+} Energy [cm]",
       "ztitle": "#mu^{+} / bin / event",
       "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactorPerEvent,
+    },
+    {
+      "name":   "pEbVrangeMum",
+      "var":    "rangeInWideTPC:pEb",
+      "binning":[40,0,5,40,0,700.],
+      "ytitle": "#mu^{-} range in TPC [cm]",
+      "xtitle": "Initial #mu^{-} Energy [cm]",
+      "ztitle": "#mu^{-} / bin / event",
+      "cuts":   "pdg== 13 && inWideTPCe && pe<0.01",
       "scaleFactor": scaleFactorPerEvent,
     },
     {
@@ -352,6 +374,48 @@ if __name__ == "__main__":
   ]
 
   plotOneHistOnePlot(fileConfigs,histConfigs,c,treeName)
+
+  histConfigs =  [
+    {
+      "name":   "Stop_y_rate_vol",
+      "var":    "ye",
+      "title": "Range > 0",
+      "binning":[32,0,608],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping #mu^{+} rate density [Hz m^{-3}]",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01",
+      "scaleFactor": scaleFactorHz*100./50.,
+      "normToBinWidth" : True,
+      "printIntegral": True,
+    },
+    {
+      "name":   "Stop_y_rate_vol",
+      "var":    "ye",
+      "title": "Range > 100 cm",
+      "binning":[32,0,608],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping #mu^{+} rate density [Hz m^{-3}]",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01 && rangeInWideTPC > 100.",
+      "scaleFactor": scaleFactorHz*100./50.,
+      "normToBinWidth" : True,
+      "printIntegral": True,
+      "color": root.kRed,
+    },
+    {
+      "name":   "Stop_y_rate_vol",
+      "var":    "ye",
+      "title": "Range > 200 cm",
+      "binning":[32,0,608],
+      "xtitle": "Muon stopping y [cm]",
+      "ytitle": "Stopping #mu^{+} rate density [Hz m^{-3}]",
+      "cuts":   "pdg== -13 && inWideTPCe && pe<0.01 && rangeInWideTPC > 200.",
+      "scaleFactor": scaleFactorHz*100./50.,
+      "normToBinWidth" : True,
+      "printIntegral": True,
+      "color": root.kBlue,
+    },
+  ]
+  plotManyHistsOnePlot(fileConfigs,histConfigs,c,treeName,outPrefix="forRange_")
 
 #  #tree.Scan("xb:yb:zb:180-thetazenithb*180/pi")
 #
